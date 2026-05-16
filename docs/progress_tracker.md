@@ -5,21 +5,36 @@
 2. **Simple Fields:** Keep details minimal and focused on actionable items.
 3. **Incremental Progress:** Update the overall completion percentage as tasks finish.
 
-> **Overall Project Completion:** 30% 🟢
+> **Overall Project Completion:** 45% 🟢
 
 ---
 
-## [CURRENT] Checkpoint 4: Phase 3 (Authentication UI)
+## [CURRENT] Checkpoint 5: Phase 4 (Learner Home & Navigation)
 **Date Started:** 2026-05-17
 **Status:** In Progress (0%)
-**Goal:** Build the Flutter UI screens for Login and Registration and wire them to the `AuthBloc`.
+**Goal:** Implement the main authenticated navigation structure (BottomNavigationBar) and the Learner Home Screen dashboard.
 
 *   **Completed:**
     *   None yet.
 *   **Active / Pending:**
-    *   [ ] Implement `LoginScreen` widget.
-    *   [ ] Implement `RegisterScreen` widget.
-    *   [ ] Setup `go_router` routes for auth flow.
+    *   [ ] Create `MainScaffold` with `BottomNavigationBar` (Home, Practice, Profile).
+    *   [ ] Implement `LearnerHomeScreen` UI.
+    *   [ ] Set up `go_router` nested navigation (ShellRoute) for the tabs.
+*   **Blockers:** 
+    *   None.
+
+---
+
+## Checkpoint 4: Phase 3 (Authentication UI)
+**Date Started:** 2026-05-17
+**Status:** ✅ Completed (100%)
+**Goal:** Build the Flutter UI screens for Login and Registration and wire them to the `AuthBloc`.
+
+*   **Completed:**
+    *   [x] Implemented `LoginScreen` widget.
+    *   [x] Implemented `RegisterScreen` widget.
+    *   [x] Setup `go_router` routes (`/login`, `/register`, `/home`).
+    *   [x] Wired BLoC globally in `main.dart`.
 *   **Blockers:** 
     *   None.
 

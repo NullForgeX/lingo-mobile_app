@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
-import 'core/theme/app_theme.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-void main() {
+import 'core/routes/app_router.dart';
+import 'core/theme/app_theme.dart';
+import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'injection_container.dart' as di;
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await di.init();
   runApp(const LingoApp());
 }
 
@@ -10,15 +17,19 @@ class LingoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Lingo-Abyssinia',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      home: const Scaffold(
-        body: Center(
-          child: Text('Lingo-Abyssinia Scaffolding Complete'),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<AuthBloc>(
+          create: (_) => di.sl<AuthBloc>(),
         ),
+      ],
+      child: MaterialApp.router(
+        title: 'Lingo-Abyssinia',
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
+        routerConfig: AppRouter.router,
+        debugShowCheckedModeBanner: false,
       ),
     );
   }
