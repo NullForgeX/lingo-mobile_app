@@ -5,25 +5,38 @@
 2. **Simple Fields:** Keep details minimal and focused on actionable items.
 3. **Incremental Progress:** Update the overall completion percentage as tasks finish.
 
-> **Overall Project Completion:** 15% 🟢
+> **Overall Project Completion:** 30% 🟢
 
 ---
 
-## [CURRENT] Checkpoint 3: Phase 2 (Authentication Flow)
+## [CURRENT] Checkpoint 4: Phase 3 (Authentication UI)
 **Date Started:** 2026-05-17
 **Status:** In Progress (0%)
-**Goal:** Implement the remote data sources, repositories, use cases, and BLoCs for Login and Registration flows using the provided Lingo-Abyssinia API.
+**Goal:** Build the Flutter UI screens for Login and Registration and wire them to the `AuthBloc`.
 
 *   **Completed:**
     *   None yet.
 *   **Active / Pending:**
-    *   [ ] Implement `AuthInterceptor` and Dio client singleton.
-    *   [ ] Implement Domain Layer (`AuthRepository`, `RegisterUserUseCase`, `LoginUserUseCase`).
-    *   [ ] Implement Data Layer (`AuthRemoteDataSource`, `AuthRepositoryImpl`, `UserModel`).
-    *   [ ] Implement Presentation Layer (`AuthBloc`).
+    *   [ ] Implement `LoginScreen` widget.
+    *   [ ] Implement `RegisterScreen` widget.
+    *   [ ] Setup `go_router` routes for auth flow.
 *   **Blockers:** 
     *   None.
 
+---
+
+## Checkpoint 3: Phase 2 (Authentication Flow)
+**Date Started:** 2026-05-17
+**Status:** ✅ Completed (100%)
+**Goal:** Implement the remote data sources, repositories, use cases, and BLoCs for Login and Registration flows using the provided Lingo-Abyssinia API.
+
+*   **Completed:**
+    *   [x] Implemented `AuthInterceptor` and Dio client singleton.
+    *   [x] Implemented Domain Layer (`AuthRepository`, `RegisterUserUseCase`, `LoginUserUseCase`).
+    *   [x] Implemented Data Layer (`AuthRemoteDataSource`, `AuthRepositoryImpl`, `UserModel`).
+    *   [x] Implemented Presentation Layer (`AuthBloc`).
+*   **Blockers:** 
+    *   None.
 ---
 
 ## Checkpoint 2: Phase 1 (Foundation & Architecture Setup)
