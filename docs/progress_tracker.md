@@ -5,21 +5,36 @@
 2. **Simple Fields:** Keep details minimal and focused on actionable items.
 3. **Incremental Progress:** Update the overall completion percentage as tasks finish.
 
-> **Overall Project Completion:** 45% 🟢
+> **Overall Project Completion:** 60% 🟢
 
 ---
 
-## [CURRENT] Checkpoint 5: Phase 4 (Learner Home & Navigation)
+## [CURRENT] Checkpoint 6: Phase 5 (Learner Practice Engine)
 **Date Started:** 2026-05-17
 **Status:** In Progress (0%)
-**Goal:** Implement the main authenticated navigation structure (BottomNavigationBar) and the Learner Home Screen dashboard.
+**Goal:** Implement the practice module including fetching questions from backend, managing the interactive quiz state, and scoring logic.
 
 *   **Completed:**
     *   None yet.
 *   **Active / Pending:**
-    *   [ ] Create `MainScaffold` with `BottomNavigationBar` (Home, Practice, Profile).
-    *   [ ] Implement `LearnerHomeScreen` UI.
-    *   [ ] Set up `go_router` nested navigation (ShellRoute) for the tabs.
+    *   [ ] Implement Practice Domain Layer (Entities, Repositories).
+    *   [ ] Implement Practice Data Layer (Models, Remote Data Source).
+    *   [ ] Implement `PracticeBloc`.
+    *   [ ] Build `PracticeScreen` UI with interactive question cards.
+*   **Blockers:** 
+    *   None.
+
+---
+
+## Checkpoint 5: Phase 4 (Learner Home & Navigation)
+**Date Started:** 2026-05-17
+**Status:** ✅ Completed (100%)
+**Goal:** Implement the main authenticated navigation structure (BottomNavigationBar) and the Learner Home Screen dashboard.
+
+*   **Completed:**
+    *   [x] Created `MainScaffold` with `BottomNavigationBar` (Home, Practice, Profile).
+    *   [x] Implemented `LearnerHomeScreen` UI (Streak Card, Recent Activity).
+    *   [x] Set up `go_router` nested navigation (ShellRoute) for the tabs.
 *   **Blockers:** 
     *   None.
 
