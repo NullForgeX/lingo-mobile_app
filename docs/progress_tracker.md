@@ -11,16 +11,17 @@
 
 ## [CURRENT] Checkpoint 6: Phase 5 (Learner Practice Engine)
 **Date Started:** 2026-05-17
-**Status:** In Progress (0%)
+**Status:** ✅ Completed (100%)
 **Goal:** Implement the practice module including fetching questions from backend, managing the interactive quiz state, and scoring logic.
 
 *   **Completed:**
-    *   None yet.
+    *   [x] Implement Practice Domain Layer (Entities, Repositories).
+    *   [x] Implement Practice Data Layer (Models, Remote Data Source).
+    *   [x] Implement `PracticeBloc`.
+    *   [x] Build `PracticeScreen` UI structure and backend integration.
+    *   [x] Refine `PracticeScreen` UI with interactive question cards and scoring logic.
 *   **Active / Pending:**
-    *   [ ] Implement Practice Domain Layer (Entities, Repositories).
-    *   [ ] Implement Practice Data Layer (Models, Remote Data Source).
-    *   [ ] Implement `PracticeBloc`.
-    *   [ ] Build `PracticeScreen` UI with interactive question cards.
+    *   None.
 *   **Blockers:** 
     *   None.
 

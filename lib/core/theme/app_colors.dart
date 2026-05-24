@@ -1,35 +1,35 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary
-  static const Color primaryLight = Color(0xFF2563EB); // Blue 600
-  static const Color primaryDark = Color(0xFF3B82F6);  // Blue 500
+  // Primary (Ethiopian Green)
+  static const Color primaryLight = Color(0xFF268267); 
+  static const Color primaryDark = Color(0xFF358C59);  
 
-  // Secondary
-  static const Color secondaryLight = Color(0xFF10B981); // Emerald 500
-  static const Color secondaryDark = Color(0xFF34D399);  // Emerald 400
+  // Secondary (Gold)
+  static const Color secondaryLight = Color(0xFFF7A02E); 
+  static const Color secondaryDark = Color(0xFFF2BE26);  
 
   // Background
-  static const Color backgroundLight = Color(0xFFF8FAFC); // Slate 50
-  static const Color backgroundDark = Color(0xFF0F172A);  // Slate 900
+  static const Color backgroundLight = Color(0xFFF8F6F0); 
+  static const Color backgroundDark = Color(0xFF161412);  
 
-  // Surface
-  static const Color surfaceLight = Color(0xFFFFFFFF); // White
-  static const Color surfaceDark = Color(0xFF1E293B);  // Slate 800
+  // Surface (Card)
+  static const Color surfaceLight = Color(0xFFF5F1E8); 
+  static const Color surfaceDark = Color(0xFF221F1C);  
 
-  // Text Primary
-  static const Color textPrimaryLight = Color(0xFF0F172A); // Slate 900
-  static const Color textPrimaryDark = Color(0xFFF8FAFC);  // Slate 50
+  // Text Primary (Foreground)
+  static const Color textPrimaryLight = Color(0xFF2B241C); 
+  static const Color textPrimaryDark = Color(0xFFEFEBE5);  
 
-  // Text Secondary
-  static const Color textSecondaryLight = Color(0xFF64748B); // Slate 500
-  static const Color textSecondaryDark = Color(0xFF94A3B8);  // Slate 400
+  // Text Secondary (Muted Foreground)
+  static const Color textSecondaryLight = Color(0xFF756A61); 
+  static const Color textSecondaryDark = Color(0xFFA19685);  
 
-  // Error
-  static const Color errorLight = Color(0xFFEF4444); // Red 500
-  static const Color errorDark = Color(0xFFF87171);  // Red 400
+  // Error (Destructive)
+  static const Color errorLight = Color(0xFFF03D3D); 
+  static const Color errorDark = Color(0xFF7B1D1D);  
 
   // Border
-  static const Color borderLight = Color(0xFFE2E8F0); // Slate 200
-  static const Color borderDark = Color(0xFF334155);  // Slate 700
+  static const Color borderLight = Color(0xFFE1D7C3); 
+  static const Color borderDark = Color(0xFF38332E);  
 }

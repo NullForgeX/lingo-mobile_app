@@ -18,9 +18,9 @@ class AppTheme {
         onError: Colors.white,
       ),
       scaffoldBackgroundColor: AppColors.backgroundLight,
-      textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme).copyWith(
-        displayLarge: const TextStyle(color: AppColors.textPrimaryLight, fontWeight: FontWeight.w700, fontSize: 32, letterSpacing: -0.5),
-        headlineMedium: const TextStyle(color: AppColors.textPrimaryLight, fontWeight: FontWeight.w600, fontSize: 24, letterSpacing: 0),
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(ThemeData.light().textTheme).copyWith(
+        displayLarge: GoogleFonts.fraunces(color: AppColors.textPrimaryLight, fontWeight: FontWeight.w700, fontSize: 32, letterSpacing: -0.5),
+        headlineMedium: GoogleFonts.fraunces(color: AppColors.textPrimaryLight, fontWeight: FontWeight.w600, fontSize: 24, letterSpacing: 0),
         titleMedium: const TextStyle(color: AppColors.textPrimaryLight, fontWeight: FontWeight.w500, fontSize: 16, letterSpacing: 0.15),
         bodyLarge: const TextStyle(color: AppColors.textPrimaryLight, fontWeight: FontWeight.w400, fontSize: 16, letterSpacing: 0.5),
         bodyMedium: const TextStyle(color: AppColors.textSecondaryLight, fontWeight: FontWeight.w400, fontSize: 14, letterSpacing: 0.25),
@@ -38,7 +38,7 @@ class AppTheme {
           backgroundColor: AppColors.primaryLight,
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 0,
         ),
       ),
@@ -47,19 +47,19 @@ class AppTheme {
         fillColor: AppColors.surfaceLight,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.borderLight),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.borderLight),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primaryLight, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.errorLight),
         ),
       ),
@@ -81,9 +81,9 @@ class AppTheme {
         onError: Colors.white,
       ),
       scaffoldBackgroundColor: AppColors.backgroundDark,
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme).copyWith(
-        displayLarge: const TextStyle(color: AppColors.textPrimaryDark, fontWeight: FontWeight.w700, fontSize: 32, letterSpacing: -0.5),
-        headlineMedium: const TextStyle(color: AppColors.textPrimaryDark, fontWeight: FontWeight.w600, fontSize: 24, letterSpacing: 0),
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(ThemeData.dark().textTheme).copyWith(
+        displayLarge: GoogleFonts.fraunces(color: AppColors.textPrimaryDark, fontWeight: FontWeight.w700, fontSize: 32, letterSpacing: -0.5),
+        headlineMedium: GoogleFonts.fraunces(color: AppColors.textPrimaryDark, fontWeight: FontWeight.w600, fontSize: 24, letterSpacing: 0),
         titleMedium: const TextStyle(color: AppColors.textPrimaryDark, fontWeight: FontWeight.w500, fontSize: 16, letterSpacing: 0.15),
         bodyLarge: const TextStyle(color: AppColors.textPrimaryDark, fontWeight: FontWeight.w400, fontSize: 16, letterSpacing: 0.5),
         bodyMedium: const TextStyle(color: AppColors.textSecondaryDark, fontWeight: FontWeight.w400, fontSize: 14, letterSpacing: 0.25),
@@ -101,7 +101,7 @@ class AppTheme {
           backgroundColor: AppColors.primaryDark,
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 0,
         ),
       ),
@@ -110,19 +110,19 @@ class AppTheme {
         fillColor: AppColors.surfaceDark,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.borderDark),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.borderDark),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primaryDark, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.errorDark),
         ),
       ),

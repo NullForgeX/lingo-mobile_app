@@ -31,3 +31,16 @@ class RegisterRequested extends AuthEvent {
 class LogoutRequested extends AuthEvent {}
 
 class CheckAuthStatus extends AuthEvent {}
+
+class UpdatePreferencesRequested extends AuthEvent {
+  final String preferredLanguageId;
+  final int dailyLearningGoalMinutes;
+
+  const UpdatePreferencesRequested({
+    required this.preferredLanguageId,
+    required this.dailyLearningGoalMinutes,
+  });
+
+  @override
+  List<Object?> get props => [preferredLanguageId, dailyLearningGoalMinutes];
+}

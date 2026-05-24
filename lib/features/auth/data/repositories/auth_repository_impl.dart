@@ -64,4 +64,19 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Left(ServerFailure('An unexpected error occurred.'));
     }
   }
+
+  @override
+  Future<Either<Failure, User>> updateUserPreferences(
+      String preferredLanguageId, int dailyLearningGoalMinutes) async {
+    try {
+      final userModel = await remoteDataSource.updateUserPreferences(
+          preferredLanguageId, dailyLearningGoalMinutes);
+      return Right(userModel);
+    } on DioException catch (e) {
+      return Left(
+          ServerFailure(e.message ?? 'Failed to update user preferences.'));
+    } catch (e) {
+      return const Left(ServerFailure('An unexpected error occurred.'));
+    }
+  }
 }

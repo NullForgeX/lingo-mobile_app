@@ -7,6 +7,8 @@ abstract class AuthRemoteDataSource {
   Future<UserModel> register(String email, String password, String displayName);
   Future<void> logout();
   Future<UserModel> getCurrentUser();
+  Future<UserModel> updateUserPreferences(
+      String preferredLanguageId, int dailyLearningGoalMinutes);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -24,7 +26,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       },
     );
     if (response.data['success'] == true) {
-      return UserModel.fromJson(response.data['data']);
+      final userJson = response.data['data'];
+      try {
+        final profileResponse = await dio.get('/auth/profile');
+        if (profileResponse.data['success'] == true) {
+          return UserModel.fromJson(profileResponse.data['data']);
+        }
+      } catch (_) {
+        // Fallback to base user if profile retrieval fails
+      }
+      return UserModel.fromJson(userJson);
     } else {
       throw DioException(
         requestOptions: response.requestOptions,
@@ -62,7 +73,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<UserModel> getCurrentUser() async {
-    final response = await dio.get(ApiConstants.me);
+    final response = await dio.get('/auth/profile');
     if (response.data['success'] == true) {
       return UserModel.fromJson(response.data['data']);
     } else {
@@ -70,6 +81,27 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         requestOptions: response.requestOptions,
         response: response,
         message: response.data['error']?['message'] ?? 'Failed to get user',
+      );
+    }
+  }
+
+  @override
+  Future<UserModel> updateUserPreferences(
+      String preferredLanguageId, int dailyLearningGoalMinutes) async {
+    final response = await dio.patch(
+      '/auth/profile',
+      data: {
+        'preferredLanguageId': preferredLanguageId,
+        'dailyLearningGoalMinutes': dailyLearningGoalMinutes,
+      },
+    );
+    if (response.data['success'] == true) {
+      return UserModel.fromJson(response.data['data']);
+    } else {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        message: response.data['error']?['message'] ?? 'Failed to update preferences',
       );
     }
   }
