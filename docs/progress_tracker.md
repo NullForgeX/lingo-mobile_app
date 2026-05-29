@@ -5,11 +5,28 @@
 2. **Simple Fields:** Keep details minimal and focused on actionable items.
 3. **Incremental Progress:** Update the overall completion percentage as tasks finish.
 
-> **Overall Project Completion:** 60% 🟢
+> **Overall Project Completion:** 80% 🟢
 
 ---
 
-## [CURRENT] Checkpoint 6: Phase 5 (Learner Practice Engine)
+## Checkpoint 7: Phase 6 (Admin User Management)
+**Date Started:** 2026-05-24
+**Status:** ✅ Completed (100%)
+**Goal:** Implement the Admin User Management module allowing system administrators to search, create, update, suspend, and manage sessions of user accounts.
+
+*   **Completed:**
+    *   [x] Implement Admin Domain Layer (Entities, Repository interfaces, Use Cases for listing, creating, updating, suspending, and revoking user sessions).
+    *   [x] Implement Admin Data Layer (Models, Remote Data Source for `/admin/users` endpoints, Repository implementations).
+    *   [x] Implement `AdminBloc` to handle user list state, loading states, and administrative action requests.
+    *   [x] Build Admin Dashboard UI (User List Screen with search & filter, User Detail Screen, Create/Edit User Forms).
+    *   [x] Implement Session Revocation and Account Suspension UI options in User details.
+    *   [x] Wire routes and role-based guards in `app_router.dart` to protect admin views.
+*   **Blockers:**
+    *   None.
+
+---
+
+## Checkpoint 6: Phase 5 (Learner Practice Engine)
 **Date Started:** 2026-05-17
 **Status:** ✅ Completed (100%)
 **Goal:** Implement the practice module including fetching questions from backend, managing the interactive quiz state, and scoring logic.
