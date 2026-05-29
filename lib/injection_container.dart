@@ -6,8 +6,10 @@ import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/repositories/auth_repository.dart';
 import 'features/auth/domain/usecases/login_user.dart';
 import 'features/auth/domain/usecases/register_user.dart';
-import 'features/auth/domain/usecases/update_user_preferences.dart';
+import 'features/auth/domain/usecases/update_user_profile.dart';
+import 'features/auth/domain/usecases/get_user_profile.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/curriculum/domain/usecases/select_language.dart';
 
 import 'features/practice/data/datasources/practice_remote_data_source.dart';
 import 'features/practice/data/repositories/practice_repository_impl.dart';
@@ -23,6 +25,18 @@ import 'features/curriculum/data/datasources/curriculum_remote_data_source.dart'
 import 'features/curriculum/data/repositories/curriculum_repository_impl.dart';
 import 'features/curriculum/domain/repositories/curriculum_repository.dart';
 import 'features/curriculum/presentation/bloc/curriculum_bloc.dart';
+
+import 'features/admin/data/datasources/admin_remote_data_source.dart';
+import 'features/admin/data/repositories/admin_repository_impl.dart';
+import 'features/admin/domain/repositories/admin_repository.dart';
+import 'features/admin/domain/usecases/create_admin_user.dart';
+import 'features/admin/domain/usecases/get_admin_user_detail.dart';
+import 'features/admin/domain/usecases/get_admin_users.dart';
+import 'features/admin/domain/usecases/reactivate_user.dart';
+import 'features/admin/domain/usecases/revoke_user_sessions.dart';
+import 'features/admin/domain/usecases/suspend_user.dart';
+import 'features/admin/domain/usecases/update_admin_user.dart';
+import 'features/admin/presentation/bloc/admin_bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -69,14 +83,17 @@ Future<void> init() async {
   // Use Cases
   sl.registerLazySingleton(() => LoginUser(sl()));
   sl.registerLazySingleton(() => RegisterUser(sl()));
-  sl.registerLazySingleton(() => UpdateUserPreferences(sl()));
+  sl.registerLazySingleton(() => UpdateUserProfile(sl()));
+  sl.registerLazySingleton(() => GetUserProfile(sl()));
+  sl.registerLazySingleton(() => SelectLanguage(sl()));
 
   // BLoC
   sl.registerFactory(
     () => AuthBloc(
       loginUser: sl(),
       registerUser: sl(),
-      updateUserPreferences: sl(),
+      updateUserProfile: sl(),
+      getUserProfile: sl(),
       authRepository: sl(),
     ),
   );
@@ -91,5 +108,37 @@ Future<void> init() async {
 
   sl.registerFactory(
     () => CurriculumBloc(repository: sl()),
+  );
+
+  // Admin Data Sources
+  sl.registerLazySingleton<AdminRemoteDataSource>(
+    () => AdminRemoteDataSourceImpl(dio: sl()),
+  );
+
+  // Admin Repositories
+  sl.registerLazySingleton<AdminRepository>(
+    () => AdminRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // Admin Use Cases
+  sl.registerLazySingleton(() => GetAdminUsers(sl()));
+  sl.registerLazySingleton(() => GetAdminUserDetail(sl()));
+  sl.registerLazySingleton(() => CreateAdminUser(sl()));
+  sl.registerLazySingleton(() => UpdateAdminUser(sl()));
+  sl.registerLazySingleton(() => SuspendUser(sl()));
+  sl.registerLazySingleton(() => ReactivateUser(sl()));
+  sl.registerLazySingleton(() => RevokeUserSessions(sl()));
+
+  // Admin BLoC
+  sl.registerFactory(
+    () => AdminBloc(
+      getAdminUsers: sl(),
+      getAdminUserDetail: sl(),
+      createAdminUser: sl(),
+      updateAdminUser: sl(),
+      suspendUser: sl(),
+      reactivateUser: sl(),
+      revokeUserSessions: sl(),
+    ),
   );
 }
