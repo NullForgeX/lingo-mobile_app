@@ -44,7 +44,11 @@ class _LoginScreenState extends State<LoginScreen> {
         child: BlocConsumer<AuthBloc, AuthState>(
           listener: (context, state) {
             if (state is AuthAuthenticated) {
-              context.go('/home');
+              if (state.user.role == 'system_admin') {
+                context.go('/admin');
+              } else {
+                context.go('/home');
+              }
             } else if (state is AuthError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(

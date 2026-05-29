@@ -7,8 +7,16 @@ abstract class AuthRemoteDataSource {
   Future<UserModel> register(String email, String password, String displayName);
   Future<void> logout();
   Future<UserModel> getCurrentUser();
-  Future<UserModel> updateUserPreferences(
-      String preferredLanguageId, int dailyLearningGoalMinutes);
+  Future<UserModel> getUserProfile();
+  Future<UserModel> updateUserProfile({
+    String? displayName,
+    String? avatarUrl,
+    String? avatarAltText,
+    String? bio,
+    String? preferredLanguageId,
+    int? dailyLearningGoalMinutes,
+    String? timezone,
+  });
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -28,7 +36,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     if (response.data['success'] == true) {
       final userJson = response.data['data'];
       try {
-        final profileResponse = await dio.get('/auth/profile');
+        final profileResponse = await dio.get(ApiConstants.profile);
         if (profileResponse.data['success'] == true) {
           return UserModel.fromJson(profileResponse.data['data']);
         }
@@ -73,7 +81,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<UserModel> getCurrentUser() async {
-    final response = await dio.get('/auth/profile');
+    final response = await dio.get(ApiConstants.me);
     if (response.data['success'] == true) {
       return UserModel.fromJson(response.data['data']);
     } else {
@@ -86,14 +94,41 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<UserModel> updateUserPreferences(
-      String preferredLanguageId, int dailyLearningGoalMinutes) async {
+  Future<UserModel> getUserProfile() async {
+    final response = await dio.get(ApiConstants.profile);
+    if (response.data['success'] == true) {
+      return UserModel.fromJson(response.data['data']);
+    } else {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        message: response.data['error']?['message'] ?? 'Failed to get profile',
+      );
+    }
+  }
+
+  @override
+  Future<UserModel> updateUserProfile({
+    String? displayName,
+    String? avatarUrl,
+    String? avatarAltText,
+    String? bio,
+    String? preferredLanguageId,
+    int? dailyLearningGoalMinutes,
+    String? timezone,
+  }) async {
+    final Map<String, dynamic> data = {};
+    if (displayName != null) data['displayName'] = displayName;
+    if (avatarUrl != null) data['avatarUrl'] = avatarUrl;
+    if (avatarAltText != null) data['avatarAltText'] = avatarAltText;
+    if (bio != null) data['bio'] = bio;
+    if (preferredLanguageId != null) data['preferredLanguageId'] = preferredLanguageId;
+    if (dailyLearningGoalMinutes != null) data['dailyLearningGoalMinutes'] = dailyLearningGoalMinutes;
+    if (timezone != null) data['timezone'] = timezone;
+
     final response = await dio.patch(
-      '/auth/profile',
-      data: {
-        'preferredLanguageId': preferredLanguageId,
-        'dailyLearningGoalMinutes': dailyLearningGoalMinutes,
-      },
+      ApiConstants.profile,
+      data: data,
     );
     if (response.data['success'] == true) {
       return UserModel.fromJson(response.data['data']);
@@ -101,7 +136,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       throw DioException(
         requestOptions: response.requestOptions,
         response: response,
-        message: response.data['error']?['message'] ?? 'Failed to update preferences',
+        message: response.data['error']?['message'] ?? 'Failed to update profile',
       );
     }
   }

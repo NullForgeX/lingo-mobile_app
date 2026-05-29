@@ -9,6 +9,8 @@ class User extends Equatable {
   final String status;
   final String? preferredLanguageId;
   final int? dailyLearningGoalMinutes;
+  final String? bio;
+  final String? timezone;
 
   const User({
     required this.id,
@@ -19,6 +21,8 @@ class User extends Equatable {
     required this.status,
     this.preferredLanguageId,
     this.dailyLearningGoalMinutes,
+    this.bio,
+    this.timezone,
   });
 
   @override
@@ -31,5 +35,7 @@ class User extends Equatable {
         status,
         preferredLanguageId,
         dailyLearningGoalMinutes,
+        bio,
+        timezone,
       ];
 }

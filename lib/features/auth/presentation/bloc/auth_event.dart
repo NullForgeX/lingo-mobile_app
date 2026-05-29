@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../domain/entities/user.dart';
 
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
@@ -32,15 +33,44 @@ class LogoutRequested extends AuthEvent {}
 
 class CheckAuthStatus extends AuthEvent {}
 
+class LoadProfileRequested extends AuthEvent {}
+
 class UpdatePreferencesRequested extends AuthEvent {
-  final String preferredLanguageId;
-  final int dailyLearningGoalMinutes;
+  final String? displayName;
+  final String? avatarUrl;
+  final String? avatarAltText;
+  final String? bio;
+  final String? preferredLanguageId;
+  final int? dailyLearningGoalMinutes;
+  final String? timezone;
 
   const UpdatePreferencesRequested({
-    required this.preferredLanguageId,
-    required this.dailyLearningGoalMinutes,
+    this.displayName,
+    this.avatarUrl,
+    this.avatarAltText,
+    this.bio,
+    this.preferredLanguageId,
+    this.dailyLearningGoalMinutes,
+    this.timezone,
   });
 
   @override
-  List<Object?> get props => [preferredLanguageId, dailyLearningGoalMinutes];
+  List<Object?> get props => [
+        displayName,
+        avatarUrl,
+        avatarAltText,
+        bio,
+        preferredLanguageId,
+        dailyLearningGoalMinutes,
+        timezone,
+      ];
+}
+
+class UserProfileUpdated extends AuthEvent {
+  final User user;
+
+  const UserProfileUpdated(this.user);
+
+  @override
+  List<Object?> get props => [user];
 }
