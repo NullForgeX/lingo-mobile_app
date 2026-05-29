@@ -43,25 +43,80 @@ class _UnitsScreenState extends State<UnitsScreen> {
               itemCount: units.length,
               itemBuilder: (context, index) {
                 final unit = units[index];
+                final order = unit['order'] ?? 0;
+                final title = unit['title'] ?? '';
+                final summary = unit['summary'] ?? '';
+
                 return Card(
                   margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 2,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: const CircleAvatar(
-                      backgroundColor: AppColors.secondaryLight,
-                      child: Icon(Icons.menu_book, color: Colors.white),
-                    ),
-                    title: Text(
-                      unit['title'] ?? '',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    subtitle: Text(unit['summary'] ?? ''),
-                    trailing: const Icon(Icons.arrow_forward_ios),
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  elevation: 3,
+                  child: InkWell(
                     onTap: () {
                       context.push('/units/${widget.languageId}/lessons/${unit['id']}');
                     },
+                    child: Container(
+                      color: Theme.of(context).cardColor,
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: AppColors.secondaryLight.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '${order + 1}',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.secondaryLight,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 18),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimaryLight,
+                                      ),
+                                ),
+                                if (summary.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    summary,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textSecondaryLight,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Align(
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.play_arrow_rounded,
+                              color: AppColors.secondaryLight,
+                              size: 28,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               },

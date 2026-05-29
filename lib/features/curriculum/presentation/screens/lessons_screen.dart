@@ -43,25 +43,96 @@ class _LessonsScreenState extends State<LessonsScreen> {
               itemCount: lessons.length,
               itemBuilder: (context, index) {
                 final lesson = lessons[index];
+                final title = lesson['title'] ?? '';
+                final summary = lesson['summary'] ?? '';
+                final duration = lesson['estimatedDurationMinutes'];
+
                 return Card(
                   margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 2,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: const CircleAvatar(
-                      backgroundColor: AppColors.primaryLight,
-                      child: Icon(Icons.play_lesson, color: Colors.white),
-                    ),
-                    title: Text(
-                      lesson['title'] ?? '',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    subtitle: Text(lesson['summary'] ?? ''),
-                    trailing: const Icon(Icons.play_circle_fill, color: AppColors.primaryLight),
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  elevation: 3,
+                  child: InkWell(
                     onTap: () {
                       context.push('/practice_lesson/${lesson['id']}');
                     },
+                    child: Container(
+                      color: Theme.of(context).cardColor,
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(
+                              Icons.play_lesson_rounded,
+                              color: AppColors.primaryLight,
+                              size: 26,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimaryLight,
+                                      ),
+                                ),
+                                if (summary.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    summary,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textSecondaryLight,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ],
+                                if (duration != null) ...[
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.access_time_rounded,
+                                        size: 14,
+                                        color: AppColors.primaryLight,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '$duration min',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.primaryLight,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Align(
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.play_circle_filled_rounded,
+                              color: AppColors.primaryLight,
+                              size: 32,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               },

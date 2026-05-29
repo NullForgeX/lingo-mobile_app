@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/repositories/curriculum_repository.dart';
+import '../../../auth/domain/entities/user.dart';
 
 abstract class CurriculumEvent {}
 
@@ -13,6 +14,16 @@ class LoadUnitsEvent extends CurriculumEvent {
 class LoadLessonsEvent extends CurriculumEvent {
   final String unitId;
   LoadLessonsEvent(this.unitId);
+}
+
+class SelectLanguageEvent extends CurriculumEvent {
+  final String languageId;
+  SelectLanguageEvent(this.languageId);
+}
+
+class LoadLanguageDetailEvent extends CurriculumEvent {
+  final String languageId;
+  LoadLanguageDetailEvent(this.languageId);
 }
 
 abstract class CurriculumState {}
@@ -33,6 +44,16 @@ class UnitsLoaded extends CurriculumState {
 class LessonsLoaded extends CurriculumState {
   final List<dynamic> lessons;
   LessonsLoaded(this.lessons);
+}
+
+class LanguageSelectedState extends CurriculumState {
+  final User user;
+  LanguageSelectedState(this.user);
+}
+
+class LanguageDetailLoaded extends CurriculumState {
+  final Map<String, dynamic> language;
+  LanguageDetailLoaded(this.language);
 }
 
 class CurriculumError extends CurriculumState {
@@ -68,6 +89,24 @@ class CurriculumBloc extends Bloc<CurriculumEvent, CurriculumState> {
       result.fold(
         (failure) => emit(CurriculumError(failure.message)),
         (lessons) => emit(LessonsLoaded(lessons)),
+      );
+    });
+
+    on<SelectLanguageEvent>((event, emit) async {
+      emit(CurriculumLoading());
+      final result = await repository.selectLanguage(event.languageId);
+      result.fold(
+        (failure) => emit(CurriculumError(failure.message)),
+        (user) => emit(LanguageSelectedState(user)),
+      );
+    });
+
+    on<LoadLanguageDetailEvent>((event, emit) async {
+      emit(CurriculumLoading());
+      final result = await repository.getLanguageDetail(event.languageId);
+      result.fold(
+        (failure) => emit(CurriculumError(failure.message)),
+        (language) => emit(LanguageDetailLoaded(language)),
       );
     });
   }
