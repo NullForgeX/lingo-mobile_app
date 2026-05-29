@@ -1,6 +1,6 @@
 class ApiConstants {
   // Using 10.0.2.2 because the Android emulator cannot reach the Windows localhost.
-  static const String baseUrl = 'http://10.0.2.2:777/api/v1';
+  static const String baseUrl = 'https://lingo-backend-uatx.onrender.com/api/v1';
   
   static const String login = '/auth/login';
   static const String register = '/auth/register';
