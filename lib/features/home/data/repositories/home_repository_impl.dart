@@ -17,4 +17,14 @@ class HomeRepositoryImpl implements HomeRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> getLeaderboard({int page = 1, int pageSize = 20, String order = 'desc'}) async {
+    try {
+      final result = await remoteDataSource.getLeaderboard(page: page, pageSize: pageSize, order: order);
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

@@ -5,6 +5,13 @@ abstract class HomeEvent {}
 
 class LoadDashboardEvent extends HomeEvent {}
 
+class LoadLeaderboardEvent extends HomeEvent {
+  final int page;
+  final int pageSize;
+  final String order;
+  LoadLeaderboardEvent({this.page = 1, this.pageSize = 20, this.order = 'desc'});
+}
+
 abstract class HomeState {}
 
 class HomeInitial extends HomeState {}
@@ -20,6 +27,18 @@ class HomeError extends HomeState {
   HomeError(this.message);
 }
 
+class LeaderboardLoading extends HomeState {}
+
+class LeaderboardLoaded extends HomeState {
+  final Map<String, dynamic> leaderboardData;
+  LeaderboardLoaded(this.leaderboardData);
+}
+
+class LeaderboardError extends HomeState {
+  final String message;
+  LeaderboardError(this.message);
+}
+
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final HomeRepository repository;
 
@@ -30,6 +49,19 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       result.fold(
         (failure) => emit(HomeError(failure.message)),
         (dashboard) => emit(HomeLoaded(dashboard)),
+      );
+    });
+
+    on<LoadLeaderboardEvent>((event, emit) async {
+      emit(LeaderboardLoading());
+      final result = await repository.getLeaderboard(
+        page: event.page,
+        pageSize: event.pageSize,
+        order: event.order,
+      );
+      result.fold(
+        (failure) => emit(LeaderboardError(failure.message)),
+        (leaderboardData) => emit(LeaderboardLoaded(leaderboardData)),
       );
     });
   }

@@ -19,6 +19,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _preferredLanguageId;
   int? _dailyGoalMinutes;
   bool _initialized = false;
+  late final TextEditingController _nameController;
+  late final TextEditingController _bioController;
+  String? _timezone;
 
   final List<Map<String, dynamic>> _goals = [
     {'minutes': 5, 'label': 'Casual (5m)'},
@@ -30,23 +33,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     context.read<CurriculumBloc>().add(LoadLanguagesEvent());
+    context.read<AuthBloc>().add(LoadProfileRequested());
+  }
+
+  @override
+  void dispose() {
+    if (_initialized) {
+      _nameController.dispose();
+      _bioController.dispose();
+    }
+    super.dispose();
   }
 
   void _savePreferences() {
-    if (_preferredLanguageId != null && _dailyGoalMinutes != null) {
-      context.read<AuthBloc>().add(
-            UpdatePreferencesRequested(
-              preferredLanguageId: _preferredLanguageId!,
-              dailyLearningGoalMinutes: _dailyGoalMinutes!,
-            ),
-          );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Preferences saved successfully!'),
-          backgroundColor: AppColors.primaryLight,
-        ),
-      );
-    }
+    context.read<AuthBloc>().add(
+          UpdatePreferencesRequested(
+            displayName: _nameController.text.trim(),
+            bio: _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
+            preferredLanguageId: _preferredLanguageId,
+            dailyLearningGoalMinutes: _dailyGoalMinutes,
+            timezone: _timezone,
+          ),
+        );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Profile saved successfully!'),
+        backgroundColor: AppColors.primaryLight,
+      ),
+    );
   }
 
   void _onLogout() {
@@ -78,6 +92,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (!_initialized) {
               _preferredLanguageId = user.preferredLanguageId;
               _dailyGoalMinutes = user.dailyLearningGoalMinutes;
+              _nameController = TextEditingController(text: user.displayName);
+              _bioController = TextEditingController(text: user.bio ?? '');
+              _timezone = user.timezone;
               _initialized = true;
             }
 
@@ -90,7 +107,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       _buildUserInfoHeader(user, isDark),
                       const SizedBox(height: 32),
+                      _buildProfileInfoSection(isDark),
+                      const SizedBox(height: 32),
                       _buildPreferencesSection(curriculumState, isDark),
+                      if (user.role == 'system_admin') ...[
+                        const SizedBox(height: 32),
+                        _buildAdminSection(context, isDark),
+                      ],
                       const SizedBox(height: 32),
                       ElevatedButton(
                         onPressed: _savePreferences,
@@ -251,6 +274,154 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onChanged: (value) {
             setState(() {
               _dailyGoalMinutes = value;
+            });
+          },
+          isExpanded: true,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminSection(BuildContext context, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Administration',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            ),
+          ),
+          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+          elevation: 0,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            leading: const CircleAvatar(
+              backgroundColor: Colors.purple,
+              child: Icon(Icons.admin_panel_settings, color: Colors.white),
+            ),
+            title: const Text(
+              'Admin User Management',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: const Text('Search, create, suspend, and manage users'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              context.push('/admin');
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileInfoSection(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Profile Details',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 16),
+        // Display Name Field
+        Text(
+          'Display Name',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _nameController,
+          decoration: InputDecoration(
+            hintText: 'Enter your display name',
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        // Bio Field
+        Text(
+          'Biography',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _bioController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: 'Tell us about your learning goals...',
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        // Timezone Field
+        Text(
+          'Timezone',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+        ),
+        const SizedBox(height: 8),
+        _buildTimezoneDropdown(isDark),
+      ],
+    );
+  }
+
+  Widget _buildTimezoneDropdown(bool isDark) {
+    final List<String> timezones = [
+      'Africa/Addis_Ababa',
+      'UTC',
+      'America/New_York',
+      'Europe/London',
+      'Asia/Tokyo',
+    ];
+    if (_timezone == null || !timezones.contains(_timezone)) {
+      if (_timezone != null) {
+        timezones.add(_timezone!);
+      } else {
+        _timezone = 'Africa/Addis_Ababa';
+      }
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _timezone,
+          items: timezones.map<DropdownMenuItem<String>>((tz) {
+            return DropdownMenuItem<String>(
+              value: tz,
+              child: Text(tz),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _timezone = value;
             });
           },
           isExpanded: true,
