@@ -8,8 +8,8 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    // If the error is 401 Unauthorized, we attempt to refresh the token.
-    if (err.response?.statusCode == 401) {
+    // If the error is 401 Unauthorized, and NOT the refresh request itself, we attempt to refresh the token.
+    if (err.response?.statusCode == 401 && !err.requestOptions.path.contains(ApiConstants.refresh)) {
       final isRefreshed = await _refreshToken();
 
       if (isRefreshed) {

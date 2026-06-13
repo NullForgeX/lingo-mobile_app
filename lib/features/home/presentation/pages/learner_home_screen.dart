@@ -18,43 +18,95 @@ class LearnerHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: BlocBuilder<HomeBloc, HomeState>(
-          builder: (context, state) {
-            if (state is HomeLoading || state is HomeInitial) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (state is HomeError) {
-              return Center(child: Text(state.message));
-            } else if (state is HomeLoaded) {
-              final dashboard = state.dashboard;
-              return RefreshIndicator(
-                color: AppColors.primaryLight,
-                onRefresh: () async {
-                  context.read<HomeBloc>().add(LoadDashboardEvent());
-                },
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildHeader(context),
-                      const SizedBox(height: 32),
-                      _buildStreakCard(context, dashboard),
-                      const SizedBox(height: 32),
-                      _buildPreferredLanguageCard(context, dashboard),
-                      const SizedBox(height: 32),
-                      _buildXpBreakdown(context, dashboard),
-                      const SizedBox(height: 32),
-                      _buildContinueLearning(context, dashboard),
-                      const SizedBox(height: 32),
-                      _buildRecentActivity(context, dashboard),
-                    ],
-                  ),
-                ),
-              );
+        child: BlocListener<AuthBloc, AuthState>(
+          listener: (context, authState) {
+            if (authState is AuthAuthenticated || authState is AuthGuest) {
+              context.read<HomeBloc>().add(LoadDashboardEvent());
             }
-            return const SizedBox.shrink();
           },
+          child: BlocBuilder<HomeBloc, HomeState>(
+            builder: (context, state) {
+              if (state is HomeLoading || state is HomeInitial) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (state is HomeError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.errorLight),
+                        const SizedBox(height: 16),
+                        Text(
+                          state.message,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () {
+                            context.read<HomeBloc>().add(LoadDashboardEvent());
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryLight,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              } else if (state is HomeLoaded) {
+                final dashboard = state.dashboard;
+                final prefLang = dashboard['preferredLanguage'];
+                final hasNoLanguage = prefLang == null ||
+                    prefLang == 'null' ||
+                    (prefLang is Map && (prefLang['id'] == null || prefLang['id'].toString().isEmpty));
+                if (hasNoLanguage) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    context.go('/onboarding');
+                  });
+                  return const Scaffold(
+                    body: Center(
+                      child: CircularProgressIndicator(color: AppColors.primaryLight),
+                    ),
+                  );
+                }
+                return RefreshIndicator(
+                  color: AppColors.primaryLight,
+                  onRefresh: () async {
+                    context.read<HomeBloc>().add(LoadDashboardEvent());
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildHeader(context),
+                        _buildLoginRecommendation(context),
+                        const SizedBox(height: 32),
+                        _buildStreakCard(context, dashboard),
+                        const SizedBox(height: 32),
+                        _buildPreferredLanguageCard(context, dashboard),
+                        const SizedBox(height: 32),
+                        _buildXpBreakdown(context, dashboard),
+                        const SizedBox(height: 32),
+                        _buildContinueLearning(context, dashboard),
+                        const SizedBox(height: 32),
+                        _buildRecentActivity(context, dashboard),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ),
       ),
     );
@@ -148,6 +200,73 @@ class LearnerHomeScreen extends StatelessWidget {
               ],
             ),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLoginRecommendation(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        if (state is! AuthGuest) {
+          return const SizedBox.shrink();
+        }
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Card(
+          color: AppColors.secondaryLight.withValues(alpha: 0.1),
+          margin: const EdgeInsets.only(top: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.secondaryLight, width: 1.5),
+          ),
+          elevation: 0,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.cloud_upload_outlined, color: AppColors.secondaryLight, size: 24),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Save Your Progress!',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.secondaryLight,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Create an account to save your streak and sync your achievements.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.white70 : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    context.push('/login');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.secondaryLight,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Sign In', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );

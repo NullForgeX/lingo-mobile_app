@@ -26,6 +26,12 @@ class _UnitsScreenState extends State<UnitsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Units'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            context.go('/home');
+          },
+        ),
       ),
       body: BlocBuilder<CurriculumBloc, CurriculumState>(
         builder: (context, state) {

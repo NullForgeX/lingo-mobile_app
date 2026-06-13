@@ -50,17 +50,33 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       if (isGuest) {
         final box = Hive.box('guest_dashboard_box');
         final dashboard = Map<String, dynamic>.from(box.get('dashboard', defaultValue: <String, dynamic>{}) as Map);
-        if (dashboard.isEmpty) {
+        bool needsUpdate = false;
+        if (dashboard['streak'] == null) {
           dashboard['streak'] = {'currentDays': 0, 'lastActiveDate': ''};
+          needsUpdate = true;
+        }
+        if (dashboard['xp'] == null) {
           dashboard['xp'] = {
             'totalXp': 0,
             'lessonCompletionXp': 0,
             'assessmentXp': 0,
             'badgeXp': 0,
           };
+          needsUpdate = true;
+        }
+        if (dashboard['progress'] == null) {
           dashboard['progress'] = <dynamic>[];
+          needsUpdate = true;
+        }
+        if (dashboard['recentAttempts'] == null) {
           dashboard['recentAttempts'] = <dynamic>[];
+          needsUpdate = true;
+        }
+        if (!dashboard.containsKey('preferredLanguage')) {
           dashboard['preferredLanguage'] = null;
+          needsUpdate = true;
+        }
+        if (needsUpdate) {
           await box.put('dashboard', dashboard);
         }
         emit(HomeLoaded(dashboard));

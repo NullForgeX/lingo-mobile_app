@@ -76,14 +76,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await authRepository.getCurrentUser();
     await result.fold(
       (failure) async {
-        // If server auth check fails, see if we were in guest mode
+        // If server auth check fails, automatically transition to Guest Mode
         final box = Hive.box('auth_preferences_box');
-        final isGuest = box.get('isGuest', defaultValue: false) as bool;
-        if (isGuest) {
-          emit(AuthGuest());
-        } else {
-          emit(AuthUnauthenticated());
-        }
+        await box.put('isGuest', true);
+        emit(AuthGuest());
       },
       (user) async {
         // Successful auto-login, sync if anything pending
@@ -119,12 +115,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (event.preferredLanguageId != null) {
         final prefLang = Map<String, dynamic>.from((dashboard['preferredLanguage'] ?? <String, dynamic>{}) as Map);
         prefLang['id'] = event.preferredLanguageId;
-        if (event.preferredLanguageId == 'amharic' || event.preferredLanguageId == '1') {
+        if (event.preferredLanguageId == 'amharic' || event.preferredLanguageId == '1' || event.preferredLanguageId == '6a12c216c24497386f0a9bc0') {
           prefLang['name'] = 'Amharic';
           prefLang['nativeName'] = 'አማርኛ';
           prefLang['script'] = 'Ge\'ez';
           prefLang['summary'] = 'Official language of Ethiopia';
-        } else if (event.preferredLanguageId == 'oromo' || event.preferredLanguageId == '2') {
+        } else if (event.preferredLanguageId == 'oromo' || event.preferredLanguageId == '2' || event.preferredLanguageId == '6a12cc0ea612e8468f3a13f0') {
           prefLang['name'] = 'Oromo';
           prefLang['nativeName'] = 'Afaan Oromoo';
           prefLang['script'] = 'Latin';
@@ -164,7 +160,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _onUserProfileUpdated(UserProfileUpdated event, Emitter<AuthState> emit) {
-    emit(AuthAuthenticated(event.user));
+    if (state is AuthGuest || event.user.id == 'guest') {
+      emit(AuthGuest());
+    } else {
+      emit(AuthAuthenticated(event.user));
+    }
   }
 
   void _onEnterGuestMode(EnterGuestMode event, Emitter<AuthState> emit) async {

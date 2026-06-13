@@ -27,9 +27,9 @@ class MainScaffold extends StatelessWidget {
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.language_outlined),
-            selectedIcon: Icon(Icons.language),
-            label: 'Languages',
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
+            label: 'Lessons',
           ),
           NavigationDestination(
             icon: Icon(Icons.leaderboard_outlined),

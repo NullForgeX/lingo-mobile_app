@@ -10,19 +10,71 @@ class CurriculumRepositoryImpl implements CurriculumRepository {
 
   CurriculumRepositoryImpl({required this.remoteDataSource});
 
+  static const List<Map<String, dynamic>> _staticLanguages = [
+    {
+      'id': '6a12c216c24497386f0a9bc0',
+      'name': 'Amharic',
+      'slug': 'amharic',
+      'nativeName': 'አማርኛ',
+      'summary': 'Foundational Amharic for everyday communication.',
+      'description':
+          'Structured beginner-to-mastery Amharic curriculum with greetings, daily life, and cultural context.',
+      'script': 'Ethiopic',
+      'proficiencyLevels': [
+        {'code': 'beginner', 'label': 'Beginner', 'order': 1},
+        {'code': 'intermediate', 'label': 'Intermediate', 'order': 2},
+        {'code': 'advanced', 'label': 'Advanced', 'order': 3}
+      ]
+    },
+    {
+      'id': '6a12cc0ea612e8468f3a13f0',
+      'name': 'Afan Oromoo',
+      'slug': 'oromo',
+      'nativeName': 'Afaan Oromoo',
+      'summary': 'Foundational Afan Oromoo for everyday communication.',
+      'description':
+          'Structured beginner-to-mastery Afan Oromoo curriculum with practical vocabulary and dialogues.',
+      'script': 'Latin',
+      'proficiencyLevels': [
+        {'code': 'beginner', 'label': 'Beginner', 'order': 1},
+        {'code': 'intermediate', 'label': 'Intermediate', 'order': 2},
+        {'code': 'advanced', 'label': 'Advanced', 'order': 3}
+      ]
+    },
+    {
+      'id': '6a12cc0fa612e8468f3a1529',
+      'name': 'Tigrinya',
+      'slug': 'tigrinya',
+      'nativeName': 'ትግርኛ',
+      'summary': 'Foundational Tigrinya for everyday communication.',
+      'description':
+          'Structured beginner-to-mastery Tigrinya curriculum with greetings, travel, and community topics.',
+      'script': 'Ethiopic',
+      'proficiencyLevels': [
+        {'code': 'beginner', 'label': 'Beginner', 'order': 1},
+        {'code': 'intermediate', 'label': 'Intermediate', 'order': 2},
+        {'code': 'advanced', 'label': 'Advanced', 'order': 3}
+      ]
+    }
+  ];
+
   @override
   Future<Either<Failure, List<dynamic>>> getLanguages() async {
-    try {
-      final result = await remoteDataSource.getLanguages();
-      return Right(result);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+    // Return static bundled list immediately to avoid playstore network delays and layout crashes
+    return const Right(_staticLanguages);
   }
 
   @override
   Future<Either<Failure, Map<String, dynamic>>> getLanguageDetail(String languageId) async {
     try {
+      // Return static language match if found locally, fallback to remote API otherwise
+      final localMatch = _staticLanguages.firstWhere(
+        (lang) => lang['id'] == languageId,
+        orElse: () => <String, dynamic>{},
+      );
+      if (localMatch.isNotEmpty) {
+        return Right(localMatch);
+      }
       final result = await remoteDataSource.getLanguageDetail(languageId);
       return Right(result);
     } catch (e) {
