@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive/hive.dart';
 import '../../domain/repositories/practice_repository.dart';
 import '../../domain/entities/attempt.dart';
 
@@ -78,6 +79,11 @@ class PracticeError extends PracticeState {
 
 class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
   final PracticeRepository repository;
+  
+  List<dynamic>? _currentExercises;
+  String? _currentLessonId;
+  String? _currentLessonTitle;
+  String? _currentLanguageName;
 
   PracticeBloc({required this.repository}) : super(PracticeInitial()) {
     on<GetRuntimeEvent>((event, emit) async {
@@ -109,11 +115,23 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
         return;
       }
 
+      // Cache metadata
+      _currentLessonId = event.lessonId;
+      _currentLessonTitle = lesson?['title'] ?? 'Lesson Practice';
+      _currentLanguageName = lesson?['languageName'];
+
       emit(RuntimeLoaded(lesson!, runtime!));
     });
 
     on<StartAttemptEvent>((event, emit) async {
       emit(PracticeLoading());
+      final isGuest = Hive.box('auth_preferences_box').get('isGuest', defaultValue: false) as bool;
+      if (isGuest) {
+        _currentExercises = event.exercises;
+        final mockAttemptId = 'guest_attempt_${DateTime.now().millisecondsSinceEpoch}';
+        emit(AttemptStarted(mockAttemptId, event.exercises));
+        return;
+      }
       final result = await repository.startLessonAttempt(event.lessonId);
       result.fold(
         (failure) => emit(PracticeError(failure.message)),
@@ -123,6 +141,13 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
 
     on<StartExerciseAttemptEvent>((event, emit) async {
       emit(PracticeLoading());
+      final isGuest = Hive.box('auth_preferences_box').get('isGuest', defaultValue: false) as bool;
+      if (isGuest) {
+        _currentExercises = [event.exercise];
+        final mockAttemptId = 'guest_attempt_${DateTime.now().millisecondsSinceEpoch}';
+        emit(AttemptStarted(mockAttemptId, [event.exercise]));
+        return;
+      }
       final result = await repository.startExerciseAttempt(event.exerciseId);
       result.fold(
         (failure) => emit(PracticeError(failure.message)),
@@ -132,6 +157,19 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
 
     on<ListAttemptsEvent>((event, emit) async {
       emit(PracticeLoading());
+      final isGuest = Hive.box('auth_preferences_box').get('isGuest', defaultValue: false) as bool;
+      if (isGuest) {
+        // Guest user attempts list loading from Hive
+        final attemptsBox = Hive.box('guest_attempts_box');
+        final items = attemptsBox.values.map((v) => Map<String, dynamic>.from(v as Map)).toList().reversed.toList();
+        emit(AttemptsListLoaded({
+          'items': items,
+          'total': items.length,
+          'page': 1,
+          'pageSize': event.pageSize,
+        }));
+        return;
+      }
       final result = await repository.listAttempts(
         page: event.page,
         pageSize: event.pageSize,
@@ -144,6 +182,11 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     });
 
     on<AbandonAttemptEvent>((event, emit) async {
+      final isGuest = Hive.box('auth_preferences_box').get('isGuest', defaultValue: false) as bool;
+      if (isGuest) {
+        emit(AttemptAbandoned(QuizAttempt(id: event.attemptId, status: 'abandoned', attemptNumber: 1)));
+        return;
+      }
       if (!isClosed) emit(PracticeLoading());
       final result = await repository.abandonAttempt(event.attemptId);
       if (!isClosed) {
@@ -156,6 +199,181 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
 
     on<SubmitAttemptEvent>((event, emit) async {
       emit(PracticeLoading());
+      final isGuest = Hive.box('auth_preferences_box').get('isGuest', defaultValue: false) as bool;
+      if (isGuest) {
+        final exercises = _currentExercises ?? [];
+        final answers = event.answers;
+
+        int correctCount = 0;
+        final List<Map<String, dynamic>> feedbackList = [];
+
+        for (final answer in answers) {
+          final exerciseId = answer['exerciseId'];
+          final type = answer['type'];
+
+          final exercise = exercises.firstWhere(
+            (e) => e['id'] == exerciseId,
+            orElse: () => null,
+          );
+
+          if (exercise == null) continue;
+
+          bool isCorrect = false;
+          final List<dynamic> correctOptionIds = exercise['correctOptionIds'] as List<dynamic>? ?? [];
+          final List<dynamic> acceptedAnswers = exercise['acceptedAnswers'] as List<dynamic>? ?? [];
+
+          if (type == 'multiple_choice' || type == 'listening') {
+            final submittedOptionIds = answer['selectedOptionIds'] as List<dynamic>? ?? [];
+            if (submittedOptionIds.isNotEmpty && correctOptionIds.isNotEmpty) {
+              isCorrect = submittedOptionIds.length == correctOptionIds.length &&
+                  submittedOptionIds.every((id) => correctOptionIds.contains(id));
+            }
+          } else {
+            final responseStr = (answer['response'] as String? ?? '').trim().toLowerCase();
+            isCorrect = acceptedAnswers.any((ans) => ans.toString().trim().toLowerCase() == responseStr);
+          }
+
+          if (isCorrect) {
+            correctCount++;
+          }
+
+          feedbackList.add({
+            'exerciseId': exerciseId,
+            'isCorrect': isCorrect,
+            'explanation': exercise['explanation'] ?? '',
+            'type': type,
+            'submittedAnswer': answer,
+            'correctOptionIds': correctOptionIds,
+            'acceptedAnswers': acceptedAnswers,
+          });
+        }
+
+        final maxScore = exercises.length;
+        final double successPercentage = maxScore > 0 ? (correctCount / maxScore) * 100 : 0;
+        final passed = successPercentage >= 70;
+        final xpEarned = (passed ? 10 : 0) + correctCount;
+
+        final attemptResult = {
+          'id': event.attemptId,
+          'status': 'completed',
+          'attemptNumber': 1,
+          'scoreSummary': {
+            'score': correctCount,
+            'maxScore': maxScore,
+            'passed': passed,
+            'xpEarned': xpEarned,
+          },
+        };
+
+        final resultPayload = {
+          'attempt': attemptResult,
+          'feedback': feedbackList,
+        };
+
+        // Save locally
+        final attemptsBox = Hive.box('guest_attempts_box');
+        final String lessonId = _currentLessonId ?? 'unknown';
+        final String lessonTitle = _currentLessonTitle ?? 'Lesson Practice';
+
+        final attemptRecordToSave = {
+          'lessonId': lessonId,
+          'lessonTitle': lessonTitle,
+          'score': correctCount,
+          'maxScore': maxScore,
+          'passed': passed,
+          'xpEarned': xpEarned,
+          'startedAt': DateTime.now().subtract(const Duration(minutes: 5)).toIso8601String(),
+          'completedAt': DateTime.now().toIso8601String(),
+          'answers': answers,
+        };
+
+        await attemptsBox.add(attemptRecordToSave);
+
+        // Update dashboard details
+        final dashboardBox = Hive.box('guest_dashboard_box');
+        final dashboard = Map<String, dynamic>.from(dashboardBox.get('dashboard', defaultValue: <String, dynamic>{}) as Map);
+
+        if (dashboard.isEmpty) {
+          dashboard['streak'] = {'currentDays': 0, 'lastActiveDate': ''};
+          dashboard['xp'] = {
+            'totalXp': 0,
+            'lessonCompletionXp': 0,
+            'assessmentXp': 0,
+            'badgeXp': 0,
+          };
+          dashboard['progress'] = <dynamic>[];
+          dashboard['recentAttempts'] = <dynamic>[];
+        }
+
+        final xp = Map<String, dynamic>.from((dashboard['xp'] ?? <String, dynamic>{}) as Map);
+        xp['totalXp'] = (xp['totalXp'] ?? 0) + xpEarned;
+        xp['lessonCompletionXp'] = (xp['lessonCompletionXp'] ?? 0) + xpEarned;
+        dashboard['xp'] = xp;
+
+        final streak = Map<String, dynamic>.from((dashboard['streak'] ?? <String, dynamic>{}) as Map);
+        final lastActiveStr = streak['lastActiveDate'] as String? ?? '';
+        final now = DateTime.now();
+        final todayStr = '${now.year}-${now.month}-${now.day}';
+
+        if (lastActiveStr != todayStr) {
+          int curDays = streak['currentDays'] ?? 0;
+          if (lastActiveStr.isNotEmpty) {
+            try {
+              final lastActiveDate = DateTime.parse(lastActiveStr);
+              final difference = now.difference(lastActiveDate).inDays;
+              if (difference == 1) {
+                curDays += 1;
+              } else if (difference > 1) {
+                curDays = 1;
+              }
+            } catch (_) {
+              curDays = 1;
+            }
+          } else {
+            curDays = 1;
+          }
+          streak['currentDays'] = curDays;
+          streak['lastActiveDate'] = todayStr;
+          dashboard['streak'] = streak;
+        }
+
+        final progressList = List<dynamic>.from(dashboard['progress'] ?? []);
+        final progressIndex = progressList.indexWhere((p) => p['lessonId'] == lessonId);
+        final progressEntry = {
+          'lessonId': lessonId,
+          'lessonTitle': lessonTitle,
+          'languageName': _currentLanguageName ?? 'Abyssinian Language',
+          'completionPercentage': successPercentage,
+        };
+        if (progressIndex >= 0) {
+          progressList[progressIndex] = progressEntry;
+        } else {
+          progressList.insert(0, progressEntry);
+        }
+        dashboard['progress'] = progressList;
+
+        final recentAttemptsList = List<dynamic>.from(dashboard['recentAttempts'] ?? []);
+        final recentAttemptEntry = {
+          'id': event.attemptId,
+          'lessonId': lessonId,
+          'lessonTitle': lessonTitle,
+          'scoreSummary': {
+            'percentage': successPercentage,
+          },
+          'startedAt': DateTime.now().toIso8601String(),
+        };
+        recentAttemptsList.insert(0, recentAttemptEntry);
+        if (recentAttemptsList.length > 5) {
+          recentAttemptsList.removeLast();
+        }
+        dashboard['recentAttempts'] = recentAttemptsList;
+
+        await dashboardBox.put('dashboard', dashboard);
+
+        emit(AttemptSubmitted(resultPayload));
+        return;
+      }
+
       final result = await repository.submitAttempt(event.attemptId, event.answers);
       result.fold(
         (failure) => emit(PracticeError(failure.message)),
@@ -164,3 +382,4 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     });
   }
 }
+

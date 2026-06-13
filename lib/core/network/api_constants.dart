@@ -1,6 +1,6 @@
 class ApiConstants {
   // Using 10.0.2.2 because the Android emulator cannot reach the Windows localhost.
-  static const String baseUrl = 'https://lingo-backend-uatx.onrender.com/api/v1';
+  static const String baseUrl = 'http://10.0.2.2:777/api/v1';
   
   static const String login = '/auth/login';
   static const String register = '/auth/register';
@@ -28,4 +28,12 @@ class ApiConstants {
   static const String getAttemptResult = '/learning/attempts/{attemptId}/result';
   static const String listAttempts = '/learning/attempts';
   static const String abandonAttempt = '/learning/attempts/{attemptId}/abandon';
+  static const String syncAttempts = '/learning/attempts/sync';
+
+  // Notifications
+  static const String getNotifications = '/notifications';
+  static const String getUnreadCount = '/notifications/unread-count';
+  static const String markAllRead = '/notifications/read-all';
+  static const String markRead = '/notifications/{notificationId}/read';
 }
+

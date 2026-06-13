@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
+import '../../../../injection_container.dart';
+import '../../../notifications/presentation/bloc/notifications_bloc.dart';
+import '../../../notifications/presentation/bloc/notifications_event.dart';
+import '../../../notifications/presentation/bloc/notifications_state.dart';
 import '../bloc/home_bloc.dart';
 
 class LearnerHomeScreen extends StatelessWidget {
@@ -83,13 +87,65 @@ class LearnerHomeScreen extends StatelessWidget {
                 ),
               ],
             ),
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: AppColors.primaryLight.withValues(alpha: 0.1),
-              backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-              child: avatarUrl == null
-                  ? const Icon(Icons.person, color: AppColors.primaryLight)
-                  : null,
+            Row(
+              children: [
+                BlocProvider(
+                  create: (context) => sl<NotificationsBloc>()..add(LoadNotificationsEvent()),
+                  child: BlocBuilder<NotificationsBloc, NotificationsState>(
+                    builder: (context, notificationState) {
+                      int unreadCount = 0;
+                      if (notificationState is NotificationsLoaded) {
+                        unreadCount = notificationState.unreadCount;
+                      }
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.notifications_outlined, size: 28),
+                            onPressed: () {
+                              context.push('/notifications');
+                            },
+                          ),
+                          if (unreadCount > 0)
+                            Positioned(
+                              right: 6,
+                              top: 6,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 16,
+                                  minHeight: 16,
+                                ),
+                                child: Text(
+                                  unreadCount > 9 ? '9+' : '$unreadCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: AppColors.primaryLight.withValues(alpha: 0.1),
+                  backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                  child: avatarUrl == null
+                      ? const Icon(Icons.person, color: AppColors.primaryLight)
+                      : null,
+                ),
+              ],
             ),
           ],
         );

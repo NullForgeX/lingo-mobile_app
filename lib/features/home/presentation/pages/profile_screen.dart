@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive/hive.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -57,7 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Profile saved successfully!'),
+        content: Text('Preferences saved successfully!'),
         backgroundColor: AppColors.primaryLight,
       ),
     );
@@ -66,6 +67,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _onLogout() {
     context.read<AuthBloc>().add(LogoutRequested());
     context.go('/login');
+  }
+
+  Widget _buildGuestWarningCard(BuildContext context, bool isDark) {
+    return Card(
+      color: AppColors.secondaryLight.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.secondaryLight, width: 1.5),
+      ),
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, color: AppColors.secondaryLight, size: 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'You are browsing as a Guest',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.secondaryLight,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Create an account or log in to sync your progress, scores, and streak to the cloud database.',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                context.go('/login');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondaryLight,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Log In / Sign Up', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuestHeader(bool isDark) {
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 50,
+          backgroundColor: AppColors.primaryLight.withValues(alpha: 0.1),
+          child: const Icon(Icons.account_circle, size: 100, color: AppColors.primaryLight),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Guest Learner',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+      ],
+    );
   }
 
   @override
@@ -85,6 +157,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, authState) {
+          if (authState is AuthGuest) {
+            if (!_initialized) {
+              final box = Hive.box('guest_dashboard_box');
+              final dashboard = Map<String, dynamic>.from(box.get('dashboard', defaultValue: <String, dynamic>{}) as Map);
+              final prefLang = dashboard['preferredLanguage'];
+              _preferredLanguageId = prefLang != null ? prefLang['id'] as String? : null;
+              _dailyGoalMinutes = dashboard['dailyLearningGoalMinutes'] as int? ?? 15;
+              _nameController = TextEditingController(text: 'Guest Learner');
+              _bioController = TextEditingController(text: '');
+              _timezone = 'Africa/Addis_Ababa';
+              _initialized = true;
+            }
+
+            return BlocBuilder<CurriculumBloc, CurriculumState>(
+              builder: (context, curriculumState) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildGuestWarningCard(context, isDark),
+                      const SizedBox(height: 32),
+                      _buildGuestHeader(isDark),
+                      const SizedBox(height: 32),
+                      _buildPreferencesSection(curriculumState, isDark),
+                      const SizedBox(height: 32),
+                      ElevatedButton(
+                        onPressed: _savePreferences,
+                        child: const Text('Save Changes'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          }
+
           if (authState is AuthAuthenticated) {
             final user = authState.user;
 
@@ -130,6 +239,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
 
   Widget _buildUserInfoHeader(user, bool isDark) {
     return Column(

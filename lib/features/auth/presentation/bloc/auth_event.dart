@@ -74,3 +74,6 @@ class UserProfileUpdated extends AuthEvent {
   @override
   List<Object?> get props => [user];
 }
+
+class EnterGuestMode extends AuthEvent {}
+

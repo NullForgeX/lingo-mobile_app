@@ -23,6 +23,9 @@ import '../../features/admin/presentation/bloc/admin_event.dart';
 import '../../features/admin/presentation/pages/admin_user_list_screen.dart';
 import '../../features/admin/presentation/pages/admin_user_detail_screen.dart';
 import '../../features/admin/presentation/pages/admin_user_form_screen.dart';
+import '../../features/notifications/presentation/bloc/notifications_bloc.dart';
+import '../../features/notifications/presentation/bloc/notifications_event.dart';
+import '../../features/notifications/presentation/pages/notifications_screen.dart';
 import '../../injection_container.dart';
 
 // Keys for nested navigation
@@ -77,6 +80,15 @@ class AppRouter {
           return BlocProvider(
             create: (_) => sl<PracticeBloc>()..add(ListAttemptsEvent()),
             child: const AttemptsHistoryScreen(),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) {
+          return BlocProvider(
+            create: (_) => sl<NotificationsBloc>()..add(LoadNotificationsEvent()),
+            child: const NotificationsScreen(),
           );
         },
       ),

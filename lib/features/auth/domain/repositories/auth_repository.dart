@@ -16,5 +16,6 @@ abstract class AuthRepository {
     String? preferredLanguageId,
     int? dailyLearningGoalMinutes,
     String? timezone,
-  });
+  Future<Either<Failure, User>> syncOfflineAttempts(List<Map<String, dynamic>> attempts);
 }
+

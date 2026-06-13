@@ -1,9 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive/hive.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/login_user.dart';
 import '../../domain/usecases/register_user.dart';
 import '../../domain/usecases/update_user_profile.dart';
 import '../../domain/usecases/get_user_profile.dart';
+import '../../domain/entities/user.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -28,41 +30,76 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LoadProfileRequested>(_onLoadProfileRequested);
     on<UpdatePreferencesRequested>(_onUpdatePreferencesRequested);
     on<UserProfileUpdated>(_onUserProfileUpdated);
+    on<EnterGuestMode>(_onEnterGuestMode);
   }
 
   void _onLoginRequested(LoginRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     final result = await loginUser(event.email, event.password);
-    result.fold(
-      (failure) => emit(AuthError(failure.message)),
-      (user) => emit(AuthAuthenticated(user)),
+    await result.fold(
+      (failure) async => emit(AuthError(failure.message)),
+      (user) async {
+        await _syncOfflineAttempts(emit, user);
+      },
     );
   }
 
   void _onRegisterRequested(RegisterRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     final result = await registerUser(event.email, event.password, event.displayName);
-    result.fold(
-      (failure) => emit(AuthError(failure.message)),
-      (user) => emit(AuthAuthenticated(user)),
+    await result.fold(
+      (failure) async => emit(AuthError(failure.message)),
+      (user) async {
+        await _syncOfflineAttempts(emit, user);
+      },
     );
   }
 
   void _onLogoutRequested(LogoutRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     await authRepository.logout();
+    
+    // Clear guest persistence flag on logout
+    final prefBox = Hive.box('auth_preferences_box');
+    await prefBox.put('isGuest', false);
+    
+    // Clear guest data
+    final attemptsBox = Hive.box('guest_attempts_box');
+    await attemptsBox.clear();
+    final dashboardBox = Hive.box('guest_dashboard_box');
+    await dashboardBox.clear();
+
     emit(AuthUnauthenticated());
   }
 
   void _onCheckAuthStatus(CheckAuthStatus event, Emitter<AuthState> emit) async {
     final result = await authRepository.getCurrentUser();
-    result.fold(
-      (failure) => emit(AuthUnauthenticated()),
-      (user) => emit(AuthAuthenticated(user)),
+    await result.fold(
+      (failure) async {
+        // If server auth check fails, see if we were in guest mode
+        final box = Hive.box('auth_preferences_box');
+        final isGuest = box.get('isGuest', defaultValue: false) as bool;
+        if (isGuest) {
+          emit(AuthGuest());
+        } else {
+          emit(AuthUnauthenticated());
+        }
+      },
+      (user) async {
+        // Successful auto-login, sync if anything pending
+        final prefBox = Hive.box('auth_preferences_box');
+        await prefBox.put('isGuest', false);
+        await _syncOfflineAttempts(emit, user);
+      },
     );
   }
 
   void _onLoadProfileRequested(LoadProfileRequested event, Emitter<AuthState> emit) async {
+    if (state is AuthGuest) {
+      // Return guest profile dummy or bypass
+      emit(AuthGuest());
+      return;
+    }
     emit(AuthLoading());
     final result = await getUserProfile();
     result.fold(
@@ -73,6 +110,43 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   void _onUpdatePreferencesRequested(
       UpdatePreferencesRequested event, Emitter<AuthState> emit) async {
+    if (state is AuthGuest) {
+      emit(AuthLoading());
+      final box = Hive.box('guest_dashboard_box');
+      final dashboard = Map<String, dynamic>.from(box.get('dashboard', defaultValue: <String, dynamic>{}) as Map);
+      
+      // Update preferred language locally
+      if (event.preferredLanguageId != null) {
+        final prefLang = Map<String, dynamic>.from((dashboard['preferredLanguage'] ?? <String, dynamic>{}) as Map);
+        prefLang['id'] = event.preferredLanguageId;
+        if (event.preferredLanguageId == 'amharic' || event.preferredLanguageId == '1') {
+          prefLang['name'] = 'Amharic';
+          prefLang['nativeName'] = 'አማርኛ';
+          prefLang['script'] = 'Ge\'ez';
+          prefLang['summary'] = 'Official language of Ethiopia';
+        } else if (event.preferredLanguageId == 'oromo' || event.preferredLanguageId == '2') {
+          prefLang['name'] = 'Oromo';
+          prefLang['nativeName'] = 'Afaan Oromoo';
+          prefLang['script'] = 'Latin';
+          prefLang['summary'] = 'Most widely spoken in Ethiopia';
+        } else {
+          prefLang['name'] = 'Tigrinya';
+          prefLang['nativeName'] = 'ትግርኛ';
+          prefLang['script'] = 'Ge\'ez';
+          prefLang['summary'] = 'Spoken in northern Ethiopia';
+        }
+        dashboard['preferredLanguage'] = prefLang;
+      }
+      
+      if (event.dailyLearningGoalMinutes != null) {
+        dashboard['dailyLearningGoalMinutes'] = event.dailyLearningGoalMinutes;
+      }
+      
+      await box.put('dashboard', dashboard);
+      emit(AuthGuest());
+      return;
+    }
+
     emit(AuthLoading());
     final result = await updateUserProfile(
       displayName: event.displayName,
@@ -92,4 +166,43 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   void _onUserProfileUpdated(UserProfileUpdated event, Emitter<AuthState> emit) {
     emit(AuthAuthenticated(event.user));
   }
+
+  void _onEnterGuestMode(EnterGuestMode event, Emitter<AuthState> emit) async {
+    final box = Hive.box('auth_preferences_box');
+    await box.put('isGuest', true);
+    emit(AuthGuest());
+  }
+
+  Future<void> _syncOfflineAttempts(Emitter<AuthState> emit, User user) async {
+    final attemptsBox = Hive.box('guest_attempts_box');
+    final prefBox = Hive.box('auth_preferences_box');
+    
+    await prefBox.put('isGuest', false);
+
+    if (attemptsBox.isEmpty) {
+      emit(AuthAuthenticated(user));
+      return;
+    }
+
+    try {
+      final attempts = attemptsBox.values
+          .map((val) => Map<String, dynamic>.from(val as Map))
+          .toList();
+
+      final result = await authRepository.syncOfflineAttempts(attempts);
+      await result.fold(
+        (failure) async {
+          // If syncing fails, log the user in anyway to not block them
+          emit(AuthAuthenticated(user));
+        },
+        (syncedUser) async {
+          await attemptsBox.clear();
+          emit(AuthAuthenticated(syncedUser));
+        },
+      );
+    } catch (_) {
+      emit(AuthAuthenticated(user));
+    }
+  }
 }
+

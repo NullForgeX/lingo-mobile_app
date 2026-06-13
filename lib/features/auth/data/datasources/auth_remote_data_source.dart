@@ -17,12 +17,38 @@ abstract class AuthRemoteDataSource {
     int? dailyLearningGoalMinutes,
     String? timezone,
   });
+  Future<UserModel> syncOfflineAttempts(List<Map<String, dynamic>> attempts);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final Dio dio;
 
   AuthRemoteDataSourceImpl({required this.dio});
+
+  @override
+  Future<UserModel> syncOfflineAttempts(List<Map<String, dynamic>> attempts) async {
+    final response = await dio.post(
+      ApiConstants.syncAttempts,
+      data: {
+        'attempts': attempts,
+      },
+    );
+    if (response.data['success'] == true) {
+      // Return user object, fallback to inner user data if present
+      final data = response.data['data'];
+      if (data is Map && data.containsKey('user')) {
+        return UserModel.fromJson(data['user']);
+      }
+      return UserModel.fromJson(data);
+    } else {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        message: response.data['error']?['message'] ?? 'Sync failed',
+      );
+    }
+  }
+
 
   @override
   Future<UserModel> login(String email, String password) async {
