@@ -17,12 +17,7 @@ import '../../features/curriculum/presentation/screens/lessons_screen.dart';
 import '../../features/practice/presentation/screens/practice_screen.dart';
 import '../../features/practice/presentation/screens/attempts_history_screen.dart';
 import '../../features/practice/presentation/bloc/practice_bloc.dart';
-import '../../features/admin/domain/entities/admin_user.dart';
-import '../../features/admin/presentation/bloc/admin_bloc.dart';
-import '../../features/admin/presentation/bloc/admin_event.dart';
-import '../../features/admin/presentation/pages/admin_user_list_screen.dart';
-import '../../features/admin/presentation/pages/admin_user_detail_screen.dart';
-import '../../features/admin/presentation/pages/admin_user_form_screen.dart';
+
 import '../../features/notifications/presentation/bloc/notifications_bloc.dart';
 import '../../features/notifications/presentation/bloc/notifications_event.dart';
 import '../../features/notifications/presentation/pages/notifications_screen.dart';
@@ -38,7 +33,7 @@ final _profileNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'profile');
 class AppRouter {
   static final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/login',
+    initialLocation: '/home',
     routes: [
       GoRoute(
         path: '/login',
@@ -103,36 +98,7 @@ class AppRouter {
           child: const OnboardingScreen(),
         ),
       ),
-      GoRoute(
-        path: '/admin',
-        builder: (context, state) => BlocProvider(
-          create: (_) => sl<AdminBloc>()..add(const LoadUsersEvent(page: 1)),
-          child: const AdminUserListScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/admin/user/:userId',
-        builder: (context, state) {
-          final userId = state.pathParameters['userId']!;
-          return BlocProvider(
-            create: (_) => sl<AdminBloc>()..add(LoadUserDetailEvent(userId)),
-            child: AdminUserDetailScreen(userId: userId),
-          );
-        },
-      ),
-      GoRoute(
-        path: '/admin/user-form',
-        builder: (context, state) {
-          final user = state.extra as AdminUser?;
-          return MultiBlocProvider(
-            providers: [
-              BlocProvider(create: (_) => sl<AdminBloc>()),
-              BlocProvider(create: (_) => sl<CurriculumBloc>()..add(LoadLanguagesEvent())),
-            ],
-            child: AdminUserFormScreen(userToEdit: user),
-          );
-        },
-      ),
+
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return MainScaffold(navigationShell: navigationShell);
