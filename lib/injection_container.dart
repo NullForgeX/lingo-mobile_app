@@ -26,17 +26,7 @@ import 'features/curriculum/data/repositories/curriculum_repository_impl.dart';
 import 'features/curriculum/domain/repositories/curriculum_repository.dart';
 import 'features/curriculum/presentation/bloc/curriculum_bloc.dart';
 
-import 'features/admin/data/datasources/admin_remote_data_source.dart';
-import 'features/admin/data/repositories/admin_repository_impl.dart';
-import 'features/admin/domain/repositories/admin_repository.dart';
-import 'features/admin/domain/usecases/create_admin_user.dart';
-import 'features/admin/domain/usecases/get_admin_user_detail.dart';
-import 'features/admin/domain/usecases/get_admin_users.dart';
-import 'features/admin/domain/usecases/reactivate_user.dart';
-import 'features/admin/domain/usecases/revoke_user_sessions.dart';
-import 'features/admin/domain/usecases/suspend_user.dart';
-import 'features/admin/domain/usecases/update_admin_user.dart';
-import 'features/admin/presentation/bloc/admin_bloc.dart';
+
 
 import 'features/notifications/data/datasources/notifications_remote_data_source.dart';
 import 'features/notifications/data/repositories/notifications_repository_impl.dart';
@@ -119,37 +109,7 @@ Future<void> init() async {
     () => CurriculumBloc(repository: sl()),
   );
 
-  // Admin Data Sources
-  sl.registerLazySingleton<AdminRemoteDataSource>(
-    () => AdminRemoteDataSourceImpl(dio: sl()),
-  );
 
-  // Admin Repositories
-  sl.registerLazySingleton<AdminRepository>(
-    () => AdminRepositoryImpl(remoteDataSource: sl()),
-  );
-
-  // Admin Use Cases
-  sl.registerLazySingleton(() => GetAdminUsers(sl()));
-  sl.registerLazySingleton(() => GetAdminUserDetail(sl()));
-  sl.registerLazySingleton(() => CreateAdminUser(sl()));
-  sl.registerLazySingleton(() => UpdateAdminUser(sl()));
-  sl.registerLazySingleton(() => SuspendUser(sl()));
-  sl.registerLazySingleton(() => ReactivateUser(sl()));
-  sl.registerLazySingleton(() => RevokeUserSessions(sl()));
-
-  // Admin BLoC
-  sl.registerFactory(
-    () => AdminBloc(
-      getAdminUsers: sl(),
-      getAdminUserDetail: sl(),
-      createAdminUser: sl(),
-      updateAdminUser: sl(),
-      suspendUser: sl(),
-      reactivateUser: sl(),
-      revokeUserSessions: sl(),
-    ),
-  );
 
   // Notifications
   sl.registerLazySingleton<NotificationsRemoteDataSource>(

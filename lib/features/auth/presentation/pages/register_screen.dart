@@ -55,11 +55,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: BlocConsumer<AuthBloc, AuthState>(
           listener: (context, state) {
             if (state is AuthAuthenticated) {
-              if (state.user.role == 'system_admin') {
-                context.go('/admin');
-              } else {
-                context.go('/home');
-              }
+              context.go('/home');
             } else if (state is AuthGuest) {
               context.go('/home');
             } else if (state is AuthError) {

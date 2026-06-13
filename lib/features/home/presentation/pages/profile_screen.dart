@@ -219,10 +219,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _buildProfileInfoSection(isDark),
                       const SizedBox(height: 32),
                       _buildPreferencesSection(curriculumState, isDark),
-                      if (user.role == 'system_admin') ...[
-                        const SizedBox(height: 32),
-                        _buildAdminSection(context, isDark),
-                      ],
                       const SizedBox(height: 32),
                       ElevatedButton(
                         onPressed: _savePreferences,
@@ -392,46 +388,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildAdminSection(BuildContext context, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Administration',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: isDark ? AppColors.borderDark : AppColors.borderLight,
-            ),
-          ),
-          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-          elevation: 0,
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            leading: const CircleAvatar(
-              backgroundColor: Colors.purple,
-              child: Icon(Icons.admin_panel_settings, color: Colors.white),
-            ),
-            title: const Text(
-              'Admin User Management',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: const Text('Search, create, suspend, and manage users'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              context.push('/admin');
-            },
-          ),
-        ),
-      ],
-    );
-  }
+
 
   Widget _buildProfileInfoSection(bool isDark) {
     return Column(
