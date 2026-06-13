@@ -206,6 +206,7 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
 
         int correctCount = 0;
         final List<Map<String, dynamic>> feedbackList = [];
+        final List<Map<String, dynamic>> syncAnswers = [];
 
         for (final answer in answers) {
           final exerciseId = answer['exerciseId'];
@@ -228,9 +229,24 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
               isCorrect = submittedOptionIds.length == correctOptionIds.length &&
                   submittedOptionIds.every((id) => correctOptionIds.contains(id));
             }
+            syncAnswers.add({
+              'exerciseId': exerciseId,
+              'isCorrect': isCorrect,
+              'selectedOptionIds': submittedOptionIds,
+            });
           } else {
-            final responseStr = (answer['response'] as String? ?? '').trim().toLowerCase();
-            isCorrect = acceptedAnswers.any((ans) => ans.toString().trim().toLowerCase() == responseStr);
+            // Trim outer spaces, lowercase, and normalize consecutive whitespaces into a single space
+            final responseStr = (answer['response'] as String? ?? '')
+                .trim()
+                .replaceAll(RegExp(r'\s+'), ' ')
+                .toLowerCase();
+            isCorrect = acceptedAnswers.any((ans) =>
+                ans.toString().trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase() == responseStr);
+            syncAnswers.add({
+              'exerciseId': exerciseId,
+              'isCorrect': isCorrect,
+              'response': answer['response'] ?? '',
+            });
           }
 
           if (isCorrect) {
@@ -284,10 +300,11 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
           'xpEarned': xpEarned,
           'startedAt': DateTime.now().subtract(const Duration(minutes: 5)).toIso8601String(),
           'completedAt': DateTime.now().toIso8601String(),
-          'answers': answers,
+          'answers': syncAnswers,
         };
 
         await attemptsBox.add(attemptRecordToSave);
+
 
         // Update dashboard details
         final dashboardBox = Hive.box('guest_dashboard_box');
