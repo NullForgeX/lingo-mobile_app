@@ -39,7 +39,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await result.fold(
       (failure) async => emit(AuthError(failure.message)),
       (user) async {
-        await _syncOfflineAttempts(emit, user);
+        await _syncAllOfflineAttempts(emit, user);
       },
     );
   }
@@ -50,7 +50,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await result.fold(
       (failure) async => emit(AuthError(failure.message)),
       (user) async {
-        await _syncOfflineAttempts(emit, user);
+        await _syncAllOfflineAttempts(emit, user);
       },
     );
   }
@@ -85,7 +85,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         // Successful auto-login, sync if anything pending
         final prefBox = Hive.box('auth_preferences_box');
         await prefBox.put('isGuest', false);
-        await _syncOfflineAttempts(emit, user);
+        await _syncAllOfflineAttempts(emit, user);
       },
     );
   }
@@ -173,36 +173,50 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthGuest());
   }
 
-  Future<void> _syncOfflineAttempts(Emitter<AuthState> emit, User user) async {
-    final attemptsBox = Hive.box('guest_attempts_box');
+  Future<void> _syncAllOfflineAttempts(Emitter<AuthState> emit, User user) async {
+    final guestBox = Hive.box('guest_attempts_box');
+    final authBox = Hive.box('auth_attempts_box');
     final prefBox = Hive.box('auth_preferences_box');
     
     await prefBox.put('isGuest', false);
 
-    if (attemptsBox.isEmpty) {
-      emit(AuthAuthenticated(user));
-      return;
+    User currentUser = user;
+
+    // 1. Sync guest attempts if any
+    if (guestBox.isNotEmpty) {
+      try {
+        final attempts = guestBox.values
+            .map((val) => Map<String, dynamic>.from(val as Map))
+            .toList();
+        final result = await authRepository.syncOfflineAttempts(attempts);
+        await result.fold(
+          (failure) async {},
+          (syncedUser) async {
+            await guestBox.clear();
+            currentUser = syncedUser;
+          },
+        );
+      } catch (_) {}
     }
 
-    try {
-      final attempts = attemptsBox.values
-          .map((val) => Map<String, dynamic>.from(val as Map))
-          .toList();
-
-      final result = await authRepository.syncOfflineAttempts(attempts);
-      await result.fold(
-        (failure) async {
-          // If syncing fails, log the user in anyway to not block them
-          emit(AuthAuthenticated(user));
-        },
-        (syncedUser) async {
-          await attemptsBox.clear();
-          emit(AuthAuthenticated(syncedUser));
-        },
-      );
-    } catch (_) {
-      emit(AuthAuthenticated(user));
+    // 2. Sync authenticated attempts if any
+    if (authBox.isNotEmpty) {
+      try {
+        final attempts = authBox.values
+            .map((val) => Map<String, dynamic>.from(val as Map))
+            .toList();
+        final result = await authRepository.syncOfflineAttempts(attempts);
+        await result.fold(
+          (failure) async {},
+          (syncedUser) async {
+            await authBox.clear();
+            currentUser = syncedUser;
+          },
+        );
+      } catch (_) {}
     }
+
+    emit(AuthAuthenticated(currentUser));
   }
 }
 

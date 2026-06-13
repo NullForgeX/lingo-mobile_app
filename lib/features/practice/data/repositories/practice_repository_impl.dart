@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:hive/hive.dart';
 import '../../../../core/error/failures.dart';
 import '../../domain/repositories/practice_repository.dart';
 import '../../domain/entities/attempt.dart';
@@ -13,8 +14,15 @@ class PracticeRepositoryImpl implements PracticeRepository {
   Future<Either<Failure, Map<String, dynamic>>> getLessonDetail(String lessonId) async {
     try {
       final result = await remoteDataSource.getLessonDetail(lessonId);
+      final cacheBox = Hive.box('curriculum_cache_box');
+      await cacheBox.put('lesson_detail_$lessonId', result);
       return Right(result);
     } catch (e) {
+      final cacheBox = Hive.box('curriculum_cache_box');
+      if (cacheBox.containsKey('lesson_detail_$lessonId')) {
+        final cached = Map<String, dynamic>.from(cacheBox.get('lesson_detail_$lessonId') as Map);
+        return Right(cached);
+      }
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -23,8 +31,15 @@ class PracticeRepositoryImpl implements PracticeRepository {
   Future<Either<Failure, Map<String, dynamic>>> getLessonRuntime(String lessonId) async {
     try {
       final result = await remoteDataSource.getLessonRuntime(lessonId);
+      final cacheBox = Hive.box('curriculum_cache_box');
+      await cacheBox.put('lesson_runtime_$lessonId', result);
       return Right(result);
     } catch (e) {
+      final cacheBox = Hive.box('curriculum_cache_box');
+      if (cacheBox.containsKey('lesson_runtime_$lessonId')) {
+        final cached = Map<String, dynamic>.from(cacheBox.get('lesson_runtime_$lessonId') as Map);
+        return Right(cached);
+      }
       return Left(ServerFailure(e.toString()));
     }
   }

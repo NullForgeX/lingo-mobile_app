@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
+import 'package:hive/hive.dart';
 import '../../../../core/error/failures.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../domain/repositories/curriculum_repository.dart';
@@ -76,8 +77,15 @@ class CurriculumRepositoryImpl implements CurriculumRepository {
         return Right(localMatch);
       }
       final result = await remoteDataSource.getLanguageDetail(languageId);
+      final cacheBox = Hive.box('curriculum_cache_box');
+      await cacheBox.put('language_detail_$languageId', result);
       return Right(result);
     } catch (e) {
+      final cacheBox = Hive.box('curriculum_cache_box');
+      if (cacheBox.containsKey('language_detail_$languageId')) {
+        final cached = Map<String, dynamic>.from(cacheBox.get('language_detail_$languageId') as Map);
+        return Right(cached);
+      }
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -86,9 +94,16 @@ class CurriculumRepositoryImpl implements CurriculumRepository {
   Future<Either<Failure, List<dynamic>>> getUnits(String languageId) async {
     try {
       final result = await remoteDataSource.getUnits(languageId);
+      final cacheBox = Hive.box('curriculum_cache_box');
+      await cacheBox.put('units_$languageId', result);
       return Right(result);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      final cacheBox = Hive.box('curriculum_cache_box');
+      if (cacheBox.containsKey('units_$languageId')) {
+        final cached = List<dynamic>.from(cacheBox.get('units_$languageId') as List);
+        return Right(cached);
+      }
+      return const Left(ServerFailure('Connection failed. This curriculum is not cached for offline use.'));
     }
   }
 
@@ -96,9 +111,16 @@ class CurriculumRepositoryImpl implements CurriculumRepository {
   Future<Either<Failure, List<dynamic>>> getLessons(String unitId) async {
     try {
       final result = await remoteDataSource.getLessons(unitId);
+      final cacheBox = Hive.box('curriculum_cache_box');
+      await cacheBox.put('lessons_$unitId', result);
       return Right(result);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      final cacheBox = Hive.box('curriculum_cache_box');
+      if (cacheBox.containsKey('lessons_$unitId')) {
+        final cached = List<dynamic>.from(cacheBox.get('lessons_$unitId') as List);
+        return Right(cached);
+      }
+      return const Left(ServerFailure('Connection failed. This unit\'s lessons are not cached for offline use.'));
     }
   }
 

@@ -18,6 +18,9 @@ void main() async {
   await Hive.openBox('guest_attempts_box');
   await Hive.openBox('guest_dashboard_box');
   await Hive.openBox('auth_preferences_box');
+  await Hive.openBox('curriculum_cache_box');
+  await Hive.openBox('auth_dashboard_box');
+  await Hive.openBox('auth_attempts_box');
 
   await di.init();
   runApp(const LingoApp());
