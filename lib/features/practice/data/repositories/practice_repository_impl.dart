@@ -12,34 +12,32 @@ class PracticeRepositoryImpl implements PracticeRepository {
 
   @override
   Future<Either<Failure, Map<String, dynamic>>> getLessonDetail(String lessonId) async {
+    final cacheBox = Hive.box('curriculum_cache_box');
+    if (cacheBox.containsKey('lesson_detail_$lessonId')) {
+      final cached = Map<String, dynamic>.from(cacheBox.get('lesson_detail_$lessonId') as Map);
+      return Right(cached);
+    }
     try {
       final result = await remoteDataSource.getLessonDetail(lessonId);
-      final cacheBox = Hive.box('curriculum_cache_box');
       await cacheBox.put('lesson_detail_$lessonId', result);
       return Right(result);
     } catch (e) {
-      final cacheBox = Hive.box('curriculum_cache_box');
-      if (cacheBox.containsKey('lesson_detail_$lessonId')) {
-        final cached = Map<String, dynamic>.from(cacheBox.get('lesson_detail_$lessonId') as Map);
-        return Right(cached);
-      }
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
   Future<Either<Failure, Map<String, dynamic>>> getLessonRuntime(String lessonId) async {
+    final cacheBox = Hive.box('curriculum_cache_box');
+    if (cacheBox.containsKey('lesson_runtime_$lessonId')) {
+      final cached = Map<String, dynamic>.from(cacheBox.get('lesson_runtime_$lessonId') as Map);
+      return Right(cached);
+    }
     try {
       final result = await remoteDataSource.getLessonRuntime(lessonId);
-      final cacheBox = Hive.box('curriculum_cache_box');
       await cacheBox.put('lesson_runtime_$lessonId', result);
       return Right(result);
     } catch (e) {
-      final cacheBox = Hive.box('curriculum_cache_box');
-      if (cacheBox.containsKey('lesson_runtime_$lessonId')) {
-        final cached = Map<String, dynamic>.from(cacheBox.get('lesson_runtime_$lessonId') as Map);
-        return Right(cached);
-      }
       return Left(ServerFailure(e.toString()));
     }
   }

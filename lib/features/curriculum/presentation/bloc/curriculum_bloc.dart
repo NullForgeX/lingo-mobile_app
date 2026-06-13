@@ -32,6 +32,17 @@ class DownloadUnitEvent extends CurriculumEvent {
   DownloadUnitEvent(this.unitId);
 }
 
+class UnitsSyncedEvent extends CurriculumEvent {
+  final List<dynamic> units;
+  final List<String> downloadedUnitIds;
+  UnitsSyncedEvent(this.units, this.downloadedUnitIds);
+}
+
+class LessonsSyncedEvent extends CurriculumEvent {
+  final List<dynamic> lessons;
+  LessonsSyncedEvent(this.lessons);
+}
+
 abstract class CurriculumState {}
 
 class CurriculumInitial extends CurriculumState {}
@@ -89,8 +100,7 @@ class CurriculumBloc extends Bloc<CurriculumEvent, CurriculumState> {
     });
 
     on<LoadUnitsEvent>((event, emit) async {
-      emit(CurriculumLoading());
-      final result = await repository.getUnits(event.languageId);
+      final cacheBox = Hive.box('curriculum_cache_box');
       final downloadedResult = await repository.getDownloadedUnits();
 
       List<String> downloadedUnitIds = [];
@@ -99,13 +109,36 @@ class CurriculumBloc extends Bloc<CurriculumEvent, CurriculumState> {
         (ids) => downloadedUnitIds = ids,
       );
 
-      result.fold(
-        (failure) => emit(CurriculumError(failure.message)),
-        (units) => emit(UnitsLoaded(
-          units,
+      final hasCache = cacheBox.containsKey('units_${event.languageId}');
+      if (hasCache) {
+        final cachedUnits = List<dynamic>.from(cacheBox.get('units_${event.languageId}') as List);
+        emit(UnitsLoaded(
+          cachedUnits,
           downloadedUnitIds: downloadedUnitIds,
-        )),
-      );
+        ));
+      } else {
+        emit(CurriculumLoading());
+      }
+
+      if (hasCache) {
+        _syncUnitsBackground(event.languageId, downloadedUnitIds);
+      } else {
+        final result = await repository.getUnits(event.languageId);
+        result.fold(
+          (failure) => emit(CurriculumError(failure.message)),
+          (units) => emit(UnitsLoaded(
+            units,
+            downloadedUnitIds: downloadedUnitIds,
+          )),
+        );
+      }
+    });
+
+    on<UnitsSyncedEvent>((event, emit) {
+      emit(UnitsLoaded(
+        event.units,
+        downloadedUnitIds: event.downloadedUnitIds,
+      ));
     });
 
     on<DownloadUnitEvent>((event, emit) async {
@@ -156,12 +189,28 @@ class CurriculumBloc extends Bloc<CurriculumEvent, CurriculumState> {
     });
 
     on<LoadLessonsEvent>((event, emit) async {
-      emit(CurriculumLoading());
-      final result = await repository.getLessons(event.unitId);
-      result.fold(
-        (failure) => emit(CurriculumError(failure.message)),
-        (lessons) => emit(LessonsLoaded(lessons)),
-      );
+      final cacheBox = Hive.box('curriculum_cache_box');
+      final hasCache = cacheBox.containsKey('lessons_${event.unitId}');
+      if (hasCache) {
+        final cachedLessons = List<dynamic>.from(cacheBox.get('lessons_${event.unitId}') as List);
+        emit(LessonsLoaded(cachedLessons));
+      } else {
+        emit(CurriculumLoading());
+      }
+
+      if (hasCache) {
+        _syncLessonsBackground(event.unitId);
+      } else {
+        final result = await repository.getLessons(event.unitId);
+        result.fold(
+          (failure) => emit(CurriculumError(failure.message)),
+          (lessons) => emit(LessonsLoaded(lessons)),
+        );
+      }
+    });
+
+    on<LessonsSyncedEvent>((event, emit) {
+      emit(LessonsLoaded(event.lessons));
     });
 
     on<SelectLanguageEvent>((event, emit) async {
@@ -211,6 +260,26 @@ class CurriculumBloc extends Bloc<CurriculumEvent, CurriculumState> {
       result.fold(
         (failure) => emit(CurriculumError(failure.message)),
         (language) => emit(LanguageDetailLoaded(language)),
+      );
+    });
+  }
+
+  void _syncUnitsBackground(String languageId, List<String> downloadedUnitIds) {
+    repository.getUnits(languageId).then((result) {
+      if (isClosed) return;
+      result.fold(
+        (_) {}, // Suppress sync failures when offline
+        (units) => add(UnitsSyncedEvent(units, downloadedUnitIds)),
+      );
+    });
+  }
+
+  void _syncLessonsBackground(String unitId) {
+    repository.getLessons(unitId).then((result) {
+      if (isClosed) return;
+      result.fold(
+        (_) {}, // Suppress sync failures when offline
+        (lessons) => add(LessonsSyncedEvent(lessons)),
       );
     });
   }
