@@ -49,6 +49,8 @@ class _LoginScreenState extends State<LoginScreen> {
               } else {
                 context.go('/home');
               }
+            } else if (state is AuthGuest) {
+              context.go('/home');
             } else if (state is AuthError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -86,8 +88,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(
-                          labelText: 'Email Address',
-                          prefixIcon: Icon(Icons.email_outlined),
+                           labelText: 'Email Address',
+                           prefixIcon: Icon(Icons.email_outlined),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -133,6 +135,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(color: Theme.of(context).colorScheme.primary),
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          context.read<AuthBloc>().add(EnterGuestMode());
+                        },
+                        child: Text(
+                          'Continue as Guest',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.secondary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -140,6 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           },
         ),
+
       ),
     );
   }

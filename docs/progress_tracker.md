@@ -5,7 +5,23 @@
 2. **Simple Fields:** Keep details minimal and focused on actionable items.
 3. **Incremental Progress:** Update the overall completion percentage as tasks finish.
 
-> **Overall Project Completion:** 80% 🟢
+> **Overall Project Completion:** 90% 🟢
+
+---
+
+## Checkpoint 8: Phase 7 (Guest Mode, Auto-Login & Sync)
+**Date Started:** 2026-06-13
+**Status:** ✅ Completed (100%)
+**Goal:** Implement authentication-free guest learning session access, client-side offline grading for exercises using Hive, and auto-sync guest attempts to backend upon user authentication.
+
+*   **Completed:**
+    *   [x] Initialize Hive storage for guest dashboard data, local attempts registry, and authentication preferences box.
+    *   [x] Refactor `AuthBloc` to support guest mode, persistent auto-login session checks, guest preference local updates, and automatic progress syncing on login.
+    *   [x] Integrate "Continue as Guest" buttons and session listeners on `LoginScreen` and `RegisterScreen` UI.
+    *   [x] Implement offline client-side grading of multiple-choice and translation exercises inside `PracticeBloc` and save completed logs locally.
+    *   [x] Update `HomeBloc` to fetch dashboard indicators and leaderboard ranks locally from Hive when browsing in guest mode.
+    *   [x] Adjust `ProfileScreen` to display guest warning warning banner with signup redirection while disabling account settings edits.
+    *   [x] Implement batch synchronization API client calls mapping locally stored logs to the backend sync route.
 
 ---
 

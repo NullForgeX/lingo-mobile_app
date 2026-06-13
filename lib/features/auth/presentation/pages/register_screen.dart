@@ -60,6 +60,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               } else {
                 context.go('/home');
               }
+            } else if (state is AuthGuest) {
+              context.go('/home');
             } else if (state is AuthError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -171,6 +173,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               )
                             : const Text('Register'),
                       ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () {
+                          context.read<AuthBloc>().add(EnterGuestMode());
+                        },
+                        child: Text(
+                          'Continue as Guest',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.secondary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -178,6 +193,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             );
           },
         ),
+
       ),
     );
   }

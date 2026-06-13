@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive/hive.dart';
 import '../../domain/repositories/home_repository.dart';
 
 abstract class HomeEvent {}
@@ -45,6 +46,27 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc({required this.repository}) : super(HomeInitial()) {
     on<LoadDashboardEvent>((event, emit) async {
       emit(HomeLoading());
+      final isGuest = Hive.box('auth_preferences_box').get('isGuest', defaultValue: false) as bool;
+      if (isGuest) {
+        final box = Hive.box('guest_dashboard_box');
+        final dashboard = Map<String, dynamic>.from(box.get('dashboard', defaultValue: <String, dynamic>{}) as Map);
+        if (dashboard.isEmpty) {
+          dashboard['streak'] = {'currentDays': 0, 'lastActiveDate': ''};
+          dashboard['xp'] = {
+            'totalXp': 0,
+            'lessonCompletionXp': 0,
+            'assessmentXp': 0,
+            'badgeXp': 0,
+          };
+          dashboard['progress'] = <dynamic>[];
+          dashboard['recentAttempts'] = <dynamic>[];
+          dashboard['preferredLanguage'] = null;
+          await box.put('dashboard', dashboard);
+        }
+        emit(HomeLoaded(dashboard));
+        return;
+      }
+      
       final result = await repository.getDashboard();
       result.fold(
         (failure) => emit(HomeError(failure.message)),
@@ -54,6 +76,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     on<LoadLeaderboardEvent>((event, emit) async {
       emit(LeaderboardLoading());
+      final isGuest = Hive.box('auth_preferences_box').get('isGuest', defaultValue: false) as bool;
+      if (isGuest) {
+        emit(LeaderboardLoaded({
+          'items': <dynamic>[],
+          'userRank': {'rank': 0, 'xp': 0},
+        }));
+        return;
+      }
+      
       final result = await repository.getLeaderboard(
         page: event.page,
         pageSize: event.pageSize,
@@ -66,3 +97,4 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     });
   }
 }
+

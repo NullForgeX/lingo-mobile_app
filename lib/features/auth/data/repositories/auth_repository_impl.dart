@@ -118,4 +118,17 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Left(ServerFailure('An unexpected error occurred.'));
     }
   }
+
+  @override
+  Future<Either<Failure, User>> syncOfflineAttempts(List<Map<String, dynamic>> attempts) async {
+    try {
+      final userModel = await remoteDataSource.syncOfflineAttempts(attempts);
+      return Right(userModel);
+    } on DioException catch (e) {
+      return Left(ServerFailure(e.message ?? 'Failed to sync offline attempts.'));
+    } catch (e) {
+      return const Left(ServerFailure('An unexpected error occurred.'));
+    }
+  }
 }
+

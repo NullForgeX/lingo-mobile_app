@@ -38,6 +38,15 @@ import 'features/admin/domain/usecases/suspend_user.dart';
 import 'features/admin/domain/usecases/update_admin_user.dart';
 import 'features/admin/presentation/bloc/admin_bloc.dart';
 
+import 'features/notifications/data/datasources/notifications_remote_data_source.dart';
+import 'features/notifications/data/repositories/notifications_repository_impl.dart';
+import 'features/notifications/domain/repositories/notifications_repository.dart';
+import 'features/notifications/domain/usecases/get_notifications.dart';
+import 'features/notifications/domain/usecases/get_unread_count.dart';
+import 'features/notifications/domain/usecases/mark_notification_read.dart';
+import 'features/notifications/domain/usecases/mark_all_notifications_read.dart';
+import 'features/notifications/presentation/bloc/notifications_bloc.dart';
+
 final sl = GetIt.instance;
 
 Future<void> init() async {
@@ -139,6 +148,26 @@ Future<void> init() async {
       suspendUser: sl(),
       reactivateUser: sl(),
       revokeUserSessions: sl(),
+    ),
+  );
+
+  // Notifications
+  sl.registerLazySingleton<NotificationsRemoteDataSource>(
+    () => NotificationsRemoteDataSourceImpl(dio: sl()),
+  );
+  sl.registerLazySingleton<NotificationsRepository>(
+    () => NotificationsRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton(() => GetNotifications(sl()));
+  sl.registerLazySingleton(() => GetUnreadCount(sl()));
+  sl.registerLazySingleton(() => MarkNotificationRead(sl()));
+  sl.registerLazySingleton(() => MarkAllNotificationsRead(sl()));
+  sl.registerFactory(
+    () => NotificationsBloc(
+      getNotifications: sl(),
+      getUnreadCount: sl(),
+      markNotificationRead: sl(),
+      markAllNotificationsRead: sl(),
     ),
   );
 }
