@@ -118,6 +118,32 @@ class CurriculumRepositoryImpl implements CurriculumRepository {
       final result = await remoteDataSource.getLessons(unitId);
       final cacheBox = Hive.box('curriculum_cache_box');
       await cacheBox.put('lessons_$unitId', result);
+
+      // Pre-cache details and runtime questions for all lessons in the unit
+      for (final lesson in result) {
+        final lessonId = lesson['id'];
+        if (lessonId != null) {
+          try {
+            final detail = await practiceRemoteDataSource.getLessonDetail(lessonId);
+            await cacheBox.put('lesson_detail_$lessonId', detail);
+
+            final runtime = await practiceRemoteDataSource.getLessonRuntime(lessonId);
+            await cacheBox.put('lesson_runtime_$lessonId', runtime);
+          } catch (_) {
+            // Suppress background cache errors so it doesn't interrupt displaying the list
+          }
+        }
+      }
+
+      // Mark the unit as downloaded automatically
+      final downloadedUnits = List<String>.from(
+        cacheBox.get('downloaded_units', defaultValue: <dynamic>[]) as List,
+      );
+      if (!downloadedUnits.contains(unitId)) {
+        downloadedUnits.add(unitId);
+        await cacheBox.put('downloaded_units', downloadedUnits);
+      }
+
       return Right(result);
     } catch (e) {
       final cacheBox = Hive.box('curriculum_cache_box');
