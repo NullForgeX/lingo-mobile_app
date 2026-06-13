@@ -27,6 +27,11 @@ class LoadLanguageDetailEvent extends CurriculumEvent {
   LoadLanguageDetailEvent(this.languageId);
 }
 
+class DownloadUnitEvent extends CurriculumEvent {
+  final String unitId;
+  DownloadUnitEvent(this.unitId);
+}
+
 abstract class CurriculumState {}
 
 class CurriculumInitial extends CurriculumState {}
@@ -39,7 +44,15 @@ class LanguagesLoaded extends CurriculumState {
 
 class UnitsLoaded extends CurriculumState {
   final List<dynamic> units;
-  UnitsLoaded(this.units);
+  final List<String> downloadedUnitIds;
+  final List<String> downloadingUnitIds;
+  final String? error;
+  UnitsLoaded(
+    this.units, {
+    this.downloadedUnitIds = const [],
+    this.downloadingUnitIds = const [],
+    this.error,
+  });
 }
 
 class LessonsLoaded extends CurriculumState {
@@ -78,10 +91,68 @@ class CurriculumBloc extends Bloc<CurriculumEvent, CurriculumState> {
     on<LoadUnitsEvent>((event, emit) async {
       emit(CurriculumLoading());
       final result = await repository.getUnits(event.languageId);
+      final downloadedResult = await repository.getDownloadedUnits();
+
+      List<String> downloadedUnitIds = [];
+      downloadedResult.fold(
+        (_) {},
+        (ids) => downloadedUnitIds = ids,
+      );
+
       result.fold(
         (failure) => emit(CurriculumError(failure.message)),
-        (units) => emit(UnitsLoaded(units)),
+        (units) => emit(UnitsLoaded(
+          units,
+          downloadedUnitIds: downloadedUnitIds,
+        )),
       );
+    });
+
+    on<DownloadUnitEvent>((event, emit) async {
+      final currentState = state;
+      if (currentState is UnitsLoaded) {
+        final newDownloading = List<String>.from(currentState.downloadingUnitIds);
+        if (!newDownloading.contains(event.unitId)) {
+          newDownloading.add(event.unitId);
+        }
+
+        emit(UnitsLoaded(
+          currentState.units,
+          downloadedUnitIds: currentState.downloadedUnitIds,
+          downloadingUnitIds: newDownloading,
+        ));
+
+        final result = await repository.downloadUnit(event.unitId);
+        final finalDownloading = List<String>.from(newDownloading)..remove(event.unitId);
+
+        await result.fold(
+          (failure) async {
+            emit(UnitsLoaded(
+              currentState.units,
+              downloadedUnitIds: currentState.downloadedUnitIds,
+              downloadingUnitIds: finalDownloading,
+              error: failure.message,
+            ));
+            // Emit again immediately to clear the transient error message
+            emit(UnitsLoaded(
+              currentState.units,
+              downloadedUnitIds: currentState.downloadedUnitIds,
+              downloadingUnitIds: finalDownloading,
+            ));
+          },
+          (_) async {
+            final newDownloaded = List<String>.from(currentState.downloadedUnitIds);
+            if (!newDownloaded.contains(event.unitId)) {
+              newDownloaded.add(event.unitId);
+            }
+            emit(UnitsLoaded(
+              currentState.units,
+              downloadedUnitIds: newDownloaded,
+              downloadingUnitIds: finalDownloading,
+            ));
+          },
+        );
+      }
     });
 
     on<LoadLessonsEvent>((event, emit) async {

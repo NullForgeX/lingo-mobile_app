@@ -5,11 +5,16 @@ import '../../../../core/error/failures.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../domain/repositories/curriculum_repository.dart';
 import '../datasources/curriculum_remote_data_source.dart';
+import '../../../practice/data/datasources/practice_remote_data_source.dart';
 
 class CurriculumRepositoryImpl implements CurriculumRepository {
   final CurriculumRemoteDataSource remoteDataSource;
+  final PracticeRemoteDataSource practiceRemoteDataSource;
 
-  CurriculumRepositoryImpl({required this.remoteDataSource});
+  CurriculumRepositoryImpl({
+    required this.remoteDataSource,
+    required this.practiceRemoteDataSource,
+  });
 
   static const List<Map<String, dynamic>> _staticLanguages = [
     {
@@ -133,6 +138,52 @@ class CurriculumRepositoryImpl implements CurriculumRepository {
       return Left(ServerFailure(e.message ?? 'Failed to select language.'));
     } catch (e) {
       return const Left(ServerFailure('An unexpected error occurred.'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> downloadUnit(String unitId) async {
+    try {
+      // 1. Fetch lessons for the unit
+      final lessons = await remoteDataSource.getLessons(unitId);
+      final cacheBox = Hive.box('curriculum_cache_box');
+      await cacheBox.put('lessons_$unitId', lessons);
+
+      // 2. Fetch detail and runtime questions for each lesson
+      for (final lesson in lessons) {
+        final lessonId = lesson['id'];
+        final detail = await practiceRemoteDataSource.getLessonDetail(lessonId);
+        await cacheBox.put('lesson_detail_$lessonId', detail);
+
+        final runtime = await practiceRemoteDataSource.getLessonRuntime(lessonId);
+        await cacheBox.put('lesson_runtime_$lessonId', runtime);
+      }
+
+      // 3. Mark unit as downloaded
+      final downloadedUnits = List<String>.from(
+        cacheBox.get('downloaded_units', defaultValue: <dynamic>[]) as List,
+      );
+      if (!downloadedUnits.contains(unitId)) {
+        downloadedUnits.add(unitId);
+        await cacheBox.put('downloaded_units', downloadedUnits);
+      }
+
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure('Failed to download unit: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<String>>> getDownloadedUnits() async {
+    try {
+      final cacheBox = Hive.box('curriculum_cache_box');
+      final downloadedUnits = List<String>.from(
+        cacheBox.get('downloaded_units', defaultValue: <dynamic>[]) as List,
+      );
+      return Right(downloadedUnits);
+    } catch (e) {
+      return Left(ServerFailure('Failed to retrieve downloaded units: ${e.toString()}'));
     }
   }
 }

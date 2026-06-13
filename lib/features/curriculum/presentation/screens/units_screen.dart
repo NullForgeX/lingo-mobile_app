@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,50 @@ class _UnitsScreenState extends State<UnitsScreen> {
     context.read<CurriculumBloc>().add(LoadUnitsEvent(widget.languageId));
   }
 
+  Future<bool> _checkInternetConnection() async {
+    try {
+      final result = await InternetAddress.lookup('example.com');
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } on SocketException catch (_) {
+      return false;
+    }
+  }
+
+  Widget _buildDownloadIndicator(
+    BuildContext context,
+    String unitId,
+    bool isDownloaded,
+    bool isDownloading,
+  ) {
+    if (isDownloading) {
+      return const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondaryLight),
+        ),
+      );
+    } else if (isDownloaded) {
+      return const Icon(
+        Icons.check_circle_rounded,
+        color: Colors.green,
+        size: 28,
+      );
+    } else {
+      return IconButton(
+        icon: const Icon(
+          Icons.cloud_download_outlined,
+          color: AppColors.secondaryLight,
+          size: 26,
+        ),
+        onPressed: () {
+          context.read<CurriculumBloc>().add(DownloadUnitEvent(unitId));
+        },
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -33,7 +78,17 @@ class _UnitsScreenState extends State<UnitsScreen> {
           },
         ),
       ),
-      body: BlocBuilder<CurriculumBloc, CurriculumState>(
+      body: BlocConsumer<CurriculumBloc, CurriculumState>(
+        listener: (context, state) {
+          if (state is UnitsLoaded && state.error != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error!),
+                backgroundColor: AppColors.errorLight,
+              ),
+            );
+          }
+        },
         builder: (context, state) {
           if (state is CurriculumLoading || state is CurriculumInitial) {
             return const Center(child: CircularProgressIndicator());
@@ -41,6 +96,9 @@ class _UnitsScreenState extends State<UnitsScreen> {
             return Center(child: Text(state.message));
           } else if (state is UnitsLoaded) {
             final units = state.units;
+            final downloadedUnitIds = state.downloadedUnitIds;
+            final downloadingUnitIds = state.downloadingUnitIds;
+
             if (units.isEmpty) {
               return const Center(child: Text('No units available for this language.'));
             }
@@ -52,6 +110,9 @@ class _UnitsScreenState extends State<UnitsScreen> {
                 final order = unit['order'] ?? 0;
                 final title = unit['title'] ?? '';
                 final summary = unit['summary'] ?? '';
+                final unitId = unit['id'] ?? '';
+                final isDownloaded = downloadedUnitIds.contains(unitId);
+                final isDownloading = downloadingUnitIds.contains(unitId);
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -59,8 +120,25 @@ class _UnitsScreenState extends State<UnitsScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   elevation: 3,
                   child: InkWell(
-                    onTap: () {
-                      context.push('/units/${widget.languageId}/lessons/${unit['id']}');
+                    onTap: () async {
+                      if (isDownloaded) {
+                        context.push('/units/${widget.languageId}/lessons/$unitId');
+                      } else {
+                        final router = GoRouter.of(context);
+                        final messenger = ScaffoldMessenger.of(context);
+                        final isOnline = await _checkInternetConnection();
+                        if (!mounted) return;
+                        if (isOnline) {
+                          router.push('/units/${widget.languageId}/lessons/$unitId');
+                        } else {
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('This unit is not downloaded for offline use. Connect to the internet to download it.'),
+                              backgroundColor: AppColors.errorLight,
+                            ),
+                          );
+                        }
+                      }
                     },
                     child: Container(
                       color: Theme.of(context).cardColor,
@@ -112,12 +190,13 @@ class _UnitsScreenState extends State<UnitsScreen> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          const Align(
+                          Align(
                             alignment: Alignment.center,
-                            child: Icon(
-                              Icons.play_arrow_rounded,
-                              color: AppColors.secondaryLight,
-                              size: 28,
+                            child: _buildDownloadIndicator(
+                              context,
+                              unitId,
+                              isDownloaded,
+                              isDownloading,
                             ),
                           ),
                         ],

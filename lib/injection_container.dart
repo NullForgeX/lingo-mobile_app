@@ -76,7 +76,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<CurriculumRepository>(
-    () => CurriculumRepositoryImpl(remoteDataSource: sl()),
+    () => CurriculumRepositoryImpl(
+      remoteDataSource: sl(),
+      practiceRemoteDataSource: sl(),
+    ),
   );
 
   // Use Cases
