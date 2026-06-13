@@ -1218,6 +1218,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                       context.read<PracticeBloc>().add(GetRuntimeEvent(widget.lessonId));
                     },
                     style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(120, 48),
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

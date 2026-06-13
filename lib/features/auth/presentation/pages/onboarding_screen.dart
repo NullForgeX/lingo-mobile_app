@@ -16,33 +16,7 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  int _currentStep = 1;
   String? _selectedLanguageId;
-  int? _selectedGoalMinutes;
-
-  final List<Map<String, dynamic>> _goals = [
-    {
-      'minutes': 5,
-      'label': 'Casual',
-      'emoji': '🌱',
-      'desc': '5 minutes per day',
-      'subtitle': 'Perfect for busy schedules',
-    },
-    {
-      'minutes': 15,
-      'label': 'Regular',
-      'emoji': '🔥',
-      'desc': '15 minutes per day',
-      'subtitle': 'Recommended for most learners',
-    },
-    {
-      'minutes': 30,
-      'label': 'Intense',
-      'emoji': '🚀',
-      'desc': '30 minutes per day',
-      'subtitle': 'For serious language goals',
-    },
-  ];
 
   @override
   void initState() {
@@ -60,6 +34,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           'description': 'Official language of Ethiopia',
         };
       case 'oromo':
+      case 'afan oromoo':
         return {
           'script': 'O',
           'greeting': 'Nagaa',
@@ -81,11 +56,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _onFinish() {
-    if (_selectedLanguageId != null && _selectedGoalMinutes != null) {
+    if (_selectedLanguageId != null) {
       context.read<AuthBloc>().add(
             UpdatePreferencesRequested(
               preferredLanguageId: _selectedLanguageId!,
-              dailyLearningGoalMinutes: _selectedGoalMinutes!,
+              dailyLearningGoalMinutes: 15, // Default to 15 minutes
             ),
           );
     }
@@ -99,7 +74,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: BlocConsumer<AuthBloc, AuthState>(
           listener: (context, authState) {
-            if (authState is AuthAuthenticated) {
+            if (authState is AuthAuthenticated || authState is AuthGuest) {
               // Successfully saved preferences, go to Home
               context.go('/home');
             } else if (authState is AuthError) {
@@ -121,13 +96,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 16),
-                      _buildStepIndicator(isDark),
                       const SizedBox(height: 32),
                       Expanded(
-                        child: _currentStep == 1
-                            ? _buildLanguageSelectionStep(isDark)
-                            : _buildGoalSelectionStep(isDark),
+                        child: _buildLanguageSelectionStep(isDark),
                       ),
                       const SizedBox(height: 16),
                       _buildNavigationButtons(isSaving),
@@ -148,66 +119,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           },
         ),
       ),
-    );
-  }
-
-  Widget _buildStepIndicator(bool isDark) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildStepCircle(1, 'Language', _currentStep >= 1, isDark),
-        Container(
-          width: 48,
-          height: 2,
-          color: _currentStep > 1
-              ? AppColors.primaryLight
-              : (isDark ? AppColors.borderDark : AppColors.borderLight),
-        ),
-        _buildStepCircle(2, 'Daily Goal', _currentStep == 2, isDark),
-      ],
-    );
-  }
-
-  Widget _buildStepCircle(int step, String label, bool isActive, bool isDark) {
-    final color = isActive
-        ? AppColors.primaryLight
-        : (isDark ? AppColors.borderDark : AppColors.borderLight);
-    final textColor = isActive
-        ? Colors.white
-        : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight);
-
-    return Column(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: isActive ? color : Colors.transparent,
-            border: Border.all(color: color, width: 2),
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              '$step',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            color: isActive
-                ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)
-                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-          ),
-        ),
-      ],
     );
   }
 
@@ -347,138 +258,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildGoalSelectionStep(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Set your daily goal',
-          style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 26),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Choose how much time you want to dedicate daily.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-              ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 32),
-        Expanded(
-          child: ListView.builder(
-            itemCount: _goals.length,
-            itemBuilder: (context, index) {
-              final goal = _goals[index];
-              final minutes = goal['minutes'] as int;
-              final isSelected = _selectedGoalMinutes == minutes;
-
-              final cardColor = isSelected
-                  ? AppColors.primaryLight.withValues(alpha: 0.1)
-                  : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight);
-
-              final borderColor = isSelected
-                  ? AppColors.primaryLight
-                  : (isDark ? AppColors.borderDark : AppColors.borderLight);
-
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedGoalMinutes = minutes;
-                  });
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    border: Border.all(color: borderColor, width: 2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        goal['emoji'] as String,
-                        style: const TextStyle(fontSize: 32),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              goal['label'] as String,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              goal['subtitle'] as String,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: isDark
-                                        ? AppColors.textSecondaryDark
-                                        : AppColors.textSecondaryLight,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${minutes}m / day',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildNavigationButtons(bool isSaving) {
-    final nextDisabled = _currentStep == 1
-        ? _selectedLanguageId == null
-        : _selectedGoalMinutes == null;
+    final nextDisabled = _selectedLanguageId == null;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        if (_currentStep > 1)
-          OutlinedButton(
-            onPressed: isSaving
-                ? null
-                : () {
-                    setState(() {
-                      _currentStep = 1;
-                    });
-                  },
-            child: const Text('Back'),
-          )
-        else
-          const SizedBox.shrink(),
-        ElevatedButton(
-          onPressed: nextDisabled || isSaving
-              ? null
-              : () {
-                  if (_currentStep == 1) {
-                    setState(() {
-                      _currentStep = 2;
-                    });
-                  } else {
-                    _onFinish();
-                  }
-                },
-          child: Text(_currentStep == 1 ? 'Continue' : 'Start Learning'),
-        ),
-      ],
+    return ElevatedButton(
+      onPressed: nextDisabled || isSaving ? null : _onFinish,
+      child: const Text('Start Learning'),
     );
   }
 }
