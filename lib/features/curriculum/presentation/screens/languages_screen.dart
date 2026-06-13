@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:hive/hive.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../injection_container.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/repositories/curriculum_repository.dart';
 import '../bloc/curriculum_bloc.dart';
 
@@ -23,6 +25,27 @@ class _LanguagesScreenState extends State<LanguagesScreen> {
   void initState() {
     super.initState();
     context.read<CurriculumBloc>().add(LoadLanguagesEvent());
+
+    final authState = context.read<AuthBloc>().state;
+    String? prefLanguageId;
+    if (authState is AuthAuthenticated) {
+      prefLanguageId = authState.user.preferredLanguageId;
+    } else {
+      final box = Hive.box('guest_dashboard_box');
+      final dashboard = box.get('dashboard', defaultValue: <dynamic, dynamic>{}) as Map;
+      final preferredLanguage = dashboard['preferredLanguage'] as Map?;
+      if (preferredLanguage != null) {
+        prefLanguageId = preferredLanguage['id']?.toString();
+      }
+    }
+
+    if (prefLanguageId != null && prefLanguageId.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.go('/units/$prefLanguageId');
+        }
+      });
+    }
   }
 
   void _showLanguageDetails(BuildContext context, Map<String, dynamic> initialLang, bool isSelecting) {

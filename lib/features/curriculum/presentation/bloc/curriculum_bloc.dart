@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive/hive.dart';
 import '../../domain/repositories/curriculum_repository.dart';
 import '../../../auth/domain/entities/user.dart';
 
@@ -94,11 +95,43 @@ class CurriculumBloc extends Bloc<CurriculumEvent, CurriculumState> {
 
     on<SelectLanguageEvent>((event, emit) async {
       emit(CurriculumLoading());
-      final result = await repository.selectLanguage(event.languageId);
-      result.fold(
-        (failure) => emit(CurriculumError(failure.message)),
-        (user) => emit(LanguageSelectedState(user)),
-      );
+      final authBox = Hive.box('auth_preferences_box');
+      final isGuest = authBox.get('isGuest', defaultValue: false) as bool;
+      if (isGuest) {
+        final result = await repository.getLanguageDetail(event.languageId);
+        await result.fold(
+          (failure) async => emit(CurriculumError(failure.message)),
+          (langDetail) async {
+            final dashboardBox = Hive.box('guest_dashboard_box');
+            final dashboard = Map<String, dynamic>.from(
+                dashboardBox.get('dashboard', defaultValue: <String, dynamic>{}) as Map);
+            dashboard['preferredLanguage'] = {
+              'id': event.languageId,
+              'name': langDetail['name'],
+              'nativeName': langDetail['nativeName'],
+              'script': langDetail['script'],
+              'summary': langDetail['summary'],
+            };
+            await dashboardBox.put('dashboard', dashboard);
+
+            final mockGuestUser = User(
+              id: 'guest',
+              email: 'guest@lingo.com',
+              displayName: 'Guest',
+              role: 'learner',
+              status: 'active',
+              preferredLanguageId: event.languageId,
+            );
+            emit(LanguageSelectedState(mockGuestUser));
+          },
+        );
+      } else {
+        final result = await repository.selectLanguage(event.languageId);
+        result.fold(
+          (failure) => emit(CurriculumError(failure.message)),
+          (user) => emit(LanguageSelectedState(user)),
+        );
+      }
     });
 
     on<LoadLanguageDetailEvent>((event, emit) async {

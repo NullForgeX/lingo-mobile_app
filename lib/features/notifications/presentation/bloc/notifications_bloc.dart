@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive/hive.dart';
 import '../../domain/entities/notification.dart';
 import '../../domain/usecases/get_notifications.dart';
 import '../../domain/usecases/get_unread_count.dart';
@@ -111,6 +112,15 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
   Future<void> _fetchAndEmitNotifications(
     Emitter<NotificationsState> emit,
   ) async {
+    final isGuest = Hive.box('auth_preferences_box').get('isGuest', defaultValue: false) as bool;
+    if (isGuest) {
+      emit(const NotificationsLoaded(
+        notifications: [],
+        unreadCount: 0,
+      ));
+      return;
+    }
+
     final notificationsResult = await getNotifications();
     final countResult = await getUnreadCount();
 

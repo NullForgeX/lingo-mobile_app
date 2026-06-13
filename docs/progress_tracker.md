@@ -5,7 +5,20 @@
 2. **Simple Fields:** Keep details minimal and focused on actionable items.
 3. **Incremental Progress:** Update the overall completion percentage as tasks finish.
 
-> **Overall Project Completion:** 90% 🟢
+> **Overall Project Completion:** 95% 🟢
+
+---
+
+## Checkpoint 9: Phase 7 (Guest Mode Race Conditions & Language Match Fixes)
+**Date Started:** 2026-06-13
+**Status:** ✅ Completed (100%)
+**Goal:** Resolve authentication race conditions on startup, fix guest preferred language MongoDB ObjectId matching, and enforce new vs returning guest flow redirections.
+
+*   **Completed:**
+    *   [x] Wrap the home dashboard in a BlocListener for AuthBloc to prevent startup race condition blockers.
+    *   [x] Support database ObjectIds for Amharic and Oromo in preferred language guest preference updates.
+    *   [x] Create a comprehensive unauthenticated user flow spec document (`docs/guest_user_flow.md`).
+    *   [x] Verify and test compilation using `flutter analyze`.
 
 ---
 
