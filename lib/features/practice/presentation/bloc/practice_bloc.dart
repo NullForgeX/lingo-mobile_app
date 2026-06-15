@@ -134,7 +134,11 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
       }
       final result = await repository.startLessonAttempt(event.lessonId);
       result.fold(
-        (failure) => emit(PracticeError(failure.message)),
+        (failure) {
+          _currentExercises = event.exercises;
+          final mockAttemptId = 'offline_attempt_${DateTime.now().millisecondsSinceEpoch}';
+          emit(AttemptStarted(mockAttemptId, event.exercises));
+        },
         (attempt) => emit(AttemptStarted(attempt.id, event.exercises)),
       );
     });
@@ -150,7 +154,11 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
       }
       final result = await repository.startExerciseAttempt(event.exerciseId);
       result.fold(
-        (failure) => emit(PracticeError(failure.message)),
+        (failure) {
+          _currentExercises = [event.exercise];
+          final mockAttemptId = 'offline_attempt_${DateTime.now().millisecondsSinceEpoch}';
+          emit(AttemptStarted(mockAttemptId, [event.exercise]));
+        },
         (attempt) => emit(AttemptStarted(attempt.id, [event.exercise])),
       );
     });
@@ -200,7 +208,8 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     on<SubmitAttemptEvent>((event, emit) async {
       emit(PracticeLoading());
       final isGuest = Hive.box('auth_preferences_box').get('isGuest', defaultValue: false) as bool;
-      if (isGuest) {
+      final isOfflineAttempt = event.attemptId.startsWith('offline_attempt_');
+      if (isGuest || isOfflineAttempt) {
         final exercises = _currentExercises ?? [];
         final answers = event.answers;
 
@@ -286,8 +295,6 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
           'feedback': feedbackList,
         };
 
-        // Save locally
-        final attemptsBox = Hive.box('guest_attempts_box');
         final String lessonId = _currentLessonId ?? 'unknown';
         final String lessonTitle = _currentLessonTitle ?? 'Lesson Practice';
 
@@ -303,89 +310,167 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
           'answers': syncAnswers,
         };
 
-        await attemptsBox.add(attemptRecordToSave);
+        if (isGuest) {
+          // Save locally
+          final attemptsBox = Hive.box('guest_attempts_box');
+          await attemptsBox.add(attemptRecordToSave);
 
+          // Update dashboard details
+          final dashboardBox = Hive.box('guest_dashboard_box');
+          final dashboard = Map<String, dynamic>.from(dashboardBox.get('dashboard', defaultValue: <String, dynamic>{}) as Map);
 
-        // Update dashboard details
-        final dashboardBox = Hive.box('guest_dashboard_box');
-        final dashboard = Map<String, dynamic>.from(dashboardBox.get('dashboard', defaultValue: <String, dynamic>{}) as Map);
+          if (dashboard.isEmpty) {
+            dashboard['streak'] = {'currentDays': 0, 'lastActiveDate': ''};
+            dashboard['xp'] = {
+              'totalXp': 0,
+              'lessonCompletionXp': 0,
+              'assessmentXp': 0,
+              'badgeXp': 0,
+            };
+            dashboard['progress'] = <dynamic>[];
+            dashboard['recentAttempts'] = <dynamic>[];
+          }
 
-        if (dashboard.isEmpty) {
-          dashboard['streak'] = {'currentDays': 0, 'lastActiveDate': ''};
-          dashboard['xp'] = {
-            'totalXp': 0,
-            'lessonCompletionXp': 0,
-            'assessmentXp': 0,
-            'badgeXp': 0,
-          };
-          dashboard['progress'] = <dynamic>[];
-          dashboard['recentAttempts'] = <dynamic>[];
-        }
+          final xp = Map<String, dynamic>.from((dashboard['xp'] ?? <String, dynamic>{}) as Map);
+          xp['totalXp'] = (xp['totalXp'] ?? 0) + xpEarned;
+          xp['lessonCompletionXp'] = (xp['lessonCompletionXp'] ?? 0) + xpEarned;
+          dashboard['xp'] = xp;
 
-        final xp = Map<String, dynamic>.from((dashboard['xp'] ?? <String, dynamic>{}) as Map);
-        xp['totalXp'] = (xp['totalXp'] ?? 0) + xpEarned;
-        xp['lessonCompletionXp'] = (xp['lessonCompletionXp'] ?? 0) + xpEarned;
-        dashboard['xp'] = xp;
+          final streak = Map<String, dynamic>.from((dashboard['streak'] ?? <String, dynamic>{}) as Map);
+          final lastActiveStr = streak['lastActiveDate'] as String? ?? '';
+          final now = DateTime.now();
+          final todayStr = '${now.year}-${now.month}-${now.day}';
 
-        final streak = Map<String, dynamic>.from((dashboard['streak'] ?? <String, dynamic>{}) as Map);
-        final lastActiveStr = streak['lastActiveDate'] as String? ?? '';
-        final now = DateTime.now();
-        final todayStr = '${now.year}-${now.month}-${now.day}';
-
-        if (lastActiveStr != todayStr) {
-          int curDays = streak['currentDays'] ?? 0;
-          if (lastActiveStr.isNotEmpty) {
-            try {
-              final lastActiveDate = DateTime.parse(lastActiveStr);
-              final difference = now.difference(lastActiveDate).inDays;
-              if (difference == 1) {
-                curDays += 1;
-              } else if (difference > 1) {
+          if (lastActiveStr != todayStr) {
+            int curDays = streak['currentDays'] ?? 0;
+            if (lastActiveStr.isNotEmpty) {
+              try {
+                final lastActiveDate = DateTime.parse(lastActiveStr);
+                final difference = now.difference(lastActiveDate).inDays;
+                if (difference == 1) {
+                  curDays += 1;
+                } else if (difference > 1) {
+                  curDays = 1;
+                }
+              } catch (_) {
                 curDays = 1;
               }
-            } catch (_) {
+            } else {
               curDays = 1;
             }
-          } else {
-            curDays = 1;
+            streak['currentDays'] = curDays;
+            streak['lastActiveDate'] = todayStr;
+            dashboard['streak'] = streak;
           }
-          streak['currentDays'] = curDays;
-          streak['lastActiveDate'] = todayStr;
-          dashboard['streak'] = streak;
-        }
 
-        final progressList = List<dynamic>.from(dashboard['progress'] ?? []);
-        final progressIndex = progressList.indexWhere((p) => p['lessonId'] == lessonId);
-        final progressEntry = {
-          'lessonId': lessonId,
-          'lessonTitle': lessonTitle,
-          'languageName': _currentLanguageName ?? 'Abyssinian Language',
-          'completionPercentage': successPercentage,
-        };
-        if (progressIndex >= 0) {
-          progressList[progressIndex] = progressEntry;
+          final progressList = List<dynamic>.from(dashboard['progress'] ?? []);
+          final progressIndex = progressList.indexWhere((p) => p['lessonId'] == lessonId);
+          final progressEntry = {
+            'lessonId': lessonId,
+            'lessonTitle': lessonTitle,
+            'languageName': _currentLanguageName ?? 'Abyssinian Language',
+            'completionPercentage': successPercentage,
+          };
+          if (progressIndex >= 0) {
+            progressList[progressIndex] = progressEntry;
+          } else {
+            progressList.insert(0, progressEntry);
+          }
+          dashboard['progress'] = progressList;
+
+          final recentAttemptsList = List<dynamic>.from(dashboard['recentAttempts'] ?? []);
+          final recentAttemptEntry = {
+            'id': event.attemptId,
+            'lessonId': lessonId,
+            'lessonTitle': lessonTitle,
+            'scoreSummary': {
+              'percentage': successPercentage,
+            },
+            'startedAt': DateTime.now().toIso8601String(),
+          };
+          recentAttemptsList.insert(0, recentAttemptEntry);
+          if (recentAttemptsList.length > 5) {
+            recentAttemptsList.removeLast();
+          }
+          dashboard['recentAttempts'] = recentAttemptsList;
+
+          await dashboardBox.put('dashboard', dashboard);
         } else {
-          progressList.insert(0, progressEntry);
-        }
-        dashboard['progress'] = progressList;
+          // Save locally for auth offline attempts
+          final attemptsBox = Hive.box('auth_attempts_box');
+          await attemptsBox.add(attemptRecordToSave);
 
-        final recentAttemptsList = List<dynamic>.from(dashboard['recentAttempts'] ?? []);
-        final recentAttemptEntry = {
-          'id': event.attemptId,
-          'lessonId': lessonId,
-          'lessonTitle': lessonTitle,
-          'scoreSummary': {
-            'percentage': successPercentage,
-          },
-          'startedAt': DateTime.now().toIso8601String(),
-        };
-        recentAttemptsList.insert(0, recentAttemptEntry);
-        if (recentAttemptsList.length > 5) {
-          recentAttemptsList.removeLast();
-        }
-        dashboard['recentAttempts'] = recentAttemptsList;
+          // Update auth cached dashboard details
+          final dashboardBox = Hive.box('auth_dashboard_box');
+          final dashboard = Map<String, dynamic>.from(dashboardBox.get('dashboard', defaultValue: <String, dynamic>{}) as Map);
 
-        await dashboardBox.put('dashboard', dashboard);
+          if (dashboard.isNotEmpty) {
+            final xp = Map<String, dynamic>.from((dashboard['xp'] ?? <String, dynamic>{}) as Map);
+            xp['totalXp'] = (xp['totalXp'] ?? 0) + xpEarned;
+            xp['lessonCompletionXp'] = (xp['lessonCompletionXp'] ?? 0) + xpEarned;
+            dashboard['xp'] = xp;
+
+            final streak = Map<String, dynamic>.from((dashboard['streak'] ?? <String, dynamic>{}) as Map);
+            final lastActiveStr = streak['lastActiveDate'] as String? ?? '';
+            final now = DateTime.now();
+            final todayStr = '${now.year}-${now.month}-${now.day}';
+
+            if (lastActiveStr != todayStr) {
+              int curDays = streak['currentDays'] ?? 0;
+              if (lastActiveStr.isNotEmpty) {
+                try {
+                  final lastActiveDate = DateTime.parse(lastActiveStr);
+                  final difference = now.difference(lastActiveDate).inDays;
+                  if (difference == 1) {
+                    curDays += 1;
+                  } else if (difference > 1) {
+                    curDays = 1;
+                  }
+                } catch (_) {
+                  curDays = 1;
+                }
+              } else {
+                curDays = 1;
+              }
+              streak['currentDays'] = curDays;
+              streak['lastActiveDate'] = todayStr;
+              dashboard['streak'] = streak;
+            }
+
+            final progressList = List<dynamic>.from(dashboard['progress'] ?? []);
+            final progressIndex = progressList.indexWhere((p) => p['lessonId'] == lessonId);
+            final progressEntry = {
+              'lessonId': lessonId,
+              'lessonTitle': lessonTitle,
+              'languageName': _currentLanguageName ?? 'Language',
+              'completionPercentage': successPercentage,
+            };
+            if (progressIndex >= 0) {
+              progressList[progressIndex] = progressEntry;
+            } else {
+              progressList.insert(0, progressEntry);
+            }
+            dashboard['progress'] = progressList;
+
+            final recentAttemptsList = List<dynamic>.from(dashboard['recentAttempts'] ?? []);
+            final recentAttemptEntry = {
+              'id': event.attemptId,
+              'lessonId': lessonId,
+              'lessonTitle': lessonTitle,
+              'scoreSummary': {
+                'percentage': successPercentage,
+              },
+              'startedAt': DateTime.now().toIso8601String(),
+            };
+            recentAttemptsList.insert(0, recentAttemptEntry);
+            if (recentAttemptsList.length > 5) {
+              recentAttemptsList.removeLast();
+            }
+            dashboard['recentAttempts'] = recentAttemptsList;
+
+            await dashboardBox.put('dashboard', dashboard);
+          }
+        }
 
         emit(AttemptSubmitted(resultPayload));
         return;

@@ -45,9 +45,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   HomeBloc({required this.repository}) : super(HomeInitial()) {
     on<LoadDashboardEvent>((event, emit) async {
-      emit(HomeLoading());
       final isGuest = Hive.box('auth_preferences_box').get('isGuest', defaultValue: false) as bool;
       if (isGuest) {
+        emit(HomeLoading());
         final box = Hive.box('guest_dashboard_box');
         final dashboard = Map<String, dynamic>.from(box.get('dashboard', defaultValue: <String, dynamic>{}) as Map);
         bool needsUpdate = false;
@@ -83,10 +83,27 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         return;
       }
       
+      // Cache-First + Sync loading for authenticated users
+      final authDbBox = Hive.box('auth_dashboard_box');
+      if (authDbBox.containsKey('dashboard')) {
+        final cachedDashboard = Map<String, dynamic>.from(authDbBox.get('dashboard') as Map);
+        emit(HomeLoaded(cachedDashboard));
+      } else {
+        emit(HomeLoading());
+      }
+      
       final result = await repository.getDashboard();
-      result.fold(
-        (failure) => emit(HomeError(failure.message)),
-        (dashboard) => emit(HomeLoaded(dashboard)),
+      await result.fold(
+        (failure) async {
+          // If offline and no cache exists, show error page. Else keep showing cache.
+          if (!authDbBox.containsKey('dashboard')) {
+            emit(HomeError(failure.message));
+          }
+        },
+        (dashboard) async {
+          await authDbBox.put('dashboard', dashboard);
+          emit(HomeLoaded(dashboard));
+        },
       );
     });
 

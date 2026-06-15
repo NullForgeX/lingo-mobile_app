@@ -8,4 +8,6 @@ abstract class CurriculumRepository {
   Future<Either<Failure, List<dynamic>>> getUnits(String languageId);
   Future<Either<Failure, List<dynamic>>> getLessons(String unitId);
   Future<Either<Failure, User>> selectLanguage(String languageId);
+  Future<Either<Failure, void>> downloadUnit(String unitId);
+  Future<Either<Failure, List<String>>> getDownloadedUnits();
 }

@@ -1,5 +1,7 @@
 import 'package:dartz/dartz.dart';
+import 'package:hive/hive.dart';
 import '../../../../core/error/failures.dart';
+import '../../../../core/constants/static_curriculum_data.dart';
 import '../../domain/repositories/practice_repository.dart';
 import '../../domain/entities/attempt.dart';
 import '../datasources/practice_remote_data_source.dart';
@@ -11,20 +13,42 @@ class PracticeRepositoryImpl implements PracticeRepository {
 
   @override
   Future<Either<Failure, Map<String, dynamic>>> getLessonDetail(String lessonId) async {
+    final cacheBox = Hive.box('curriculum_cache_box');
+    if (cacheBox.containsKey('lesson_detail_$lessonId')) {
+      final cached = Map<String, dynamic>.from(cacheBox.get('lesson_detail_$lessonId') as Map);
+      return Right(cached);
+    }
     try {
       final result = await remoteDataSource.getLessonDetail(lessonId);
+      await cacheBox.put('lesson_detail_$lessonId', result);
       return Right(result);
     } catch (e) {
+      if (StaticCurriculumData.staticLessonDetails.containsKey(lessonId)) {
+        final fallback = StaticCurriculumData.staticLessonDetails[lessonId]!;
+        await cacheBox.put('lesson_detail_$lessonId', fallback);
+        return Right(fallback);
+      }
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
   Future<Either<Failure, Map<String, dynamic>>> getLessonRuntime(String lessonId) async {
+    final cacheBox = Hive.box('curriculum_cache_box');
+    if (cacheBox.containsKey('lesson_runtime_$lessonId')) {
+      final cached = Map<String, dynamic>.from(cacheBox.get('lesson_runtime_$lessonId') as Map);
+      return Right(cached);
+    }
     try {
       final result = await remoteDataSource.getLessonRuntime(lessonId);
+      await cacheBox.put('lesson_runtime_$lessonId', result);
       return Right(result);
     } catch (e) {
+      if (StaticCurriculumData.staticLessonRuntimes.containsKey(lessonId)) {
+        final fallback = StaticCurriculumData.staticLessonRuntimes[lessonId]!;
+        await cacheBox.put('lesson_runtime_$lessonId', fallback);
+        return Right(fallback);
+      }
       return Left(ServerFailure(e.toString()));
     }
   }

@@ -148,10 +148,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         title: const Text('My Profile'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _onLogout,
-            tooltip: 'Logout',
+          BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, authState) {
+              if (authState is AuthAuthenticated) {
+                return IconButton(
+                  icon: const Icon(Icons.logout),
+                  onPressed: _onLogout,
+                  tooltip: 'Logout',
+                );
+              }
+              return const SizedBox.shrink();
+            },
           ),
         ],
       ),
