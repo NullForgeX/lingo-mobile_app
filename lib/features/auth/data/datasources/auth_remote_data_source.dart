@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../../../../core/network/api_constants.dart';
 import '../models/user_model.dart';
+import '../models/sync_result_model.dart';
 
 abstract class AuthRemoteDataSource {
   Future<UserModel> login(String email, String password);
@@ -17,7 +18,7 @@ abstract class AuthRemoteDataSource {
     int? dailyLearningGoalMinutes,
     String? timezone,
   });
-  Future<UserModel> syncOfflineAttempts(List<Map<String, dynamic>> attempts);
+  Future<SyncResultModel> syncOfflineAttempts(List<Map<String, dynamic>> attempts);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -26,20 +27,57 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   AuthRemoteDataSourceImpl({required this.dio});
 
   @override
-  Future<UserModel> syncOfflineAttempts(List<Map<String, dynamic>> attempts) async {
+  Future<SyncResultModel> syncOfflineAttempts(List<Map<String, dynamic>> attempts) async {
+    final sanitizedAttempts = attempts.map((attempt) {
+      final answersList = attempt['answers'] as List<dynamic>? ?? [];
+      final sanitizedAnswers = answersList.map((ans) {
+        final ansMap = Map<String, dynamic>.from(ans as Map);
+        final Map<String, dynamic> sanitizedAns = {
+          'exerciseId': ansMap['exerciseId']?.toString(),
+          'isCorrect': ansMap['isCorrect'] ?? false,
+        };
+        
+        if (ansMap['selectedOptionIds'] != null) {
+          sanitizedAns['selectedOptionIds'] = List<String>.from(ansMap['selectedOptionIds'] as List);
+        }
+        if (ansMap['response'] != null) {
+          sanitizedAns['response'] = ansMap['response'].toString();
+        }
+        if (ansMap['pairs'] != null) {
+          sanitizedAns['pairs'] = (ansMap['pairs'] as List).map((p) {
+            final pMap = Map<String, dynamic>.from(p as Map);
+            return {
+              'leftOptionId': pMap['leftOptionId'],
+              'rightOptionId': pMap['rightOptionId'],
+            };
+          }).toList();
+        }
+        if (ansMap['orderedOptionIds'] != null) {
+          sanitizedAns['orderedOptionIds'] = List<String>.from(ansMap['orderedOptionIds'] as List);
+        }
+        return sanitizedAns;
+      }).toList();
+
+      return {
+        'lessonId': attempt['lessonId']?.toString(),
+        'score': attempt['score'] ?? 0,
+        'maxScore': attempt['maxScore'] ?? 1,
+        'passed': attempt['passed'] ?? false,
+        'xpEarned': attempt['xpEarned'] ?? 0,
+        'startedAt': DateTime.parse(attempt['startedAt'].toString()).toUtc().toIso8601String(),
+        'completedAt': DateTime.parse(attempt['completedAt'].toString()).toUtc().toIso8601String(),
+        'answers': sanitizedAnswers,
+      };
+    }).toList();
+
     final response = await dio.post(
       ApiConstants.syncAttempts,
       data: {
-        'attempts': attempts,
+        'attempts': sanitizedAttempts,
       },
     );
     if (response.data['success'] == true) {
-      // Return user object, fallback to inner user data if present
-      final data = response.data['data'];
-      if (data is Map && data.containsKey('user')) {
-        return UserModel.fromJson(data['user']);
-      }
-      return UserModel.fromJson(data);
+      return SyncResultModel.fromJson(response.data['data'] as Map<String, dynamic>);
     } else {
       throw DioException(
         requestOptions: response.requestOptions,

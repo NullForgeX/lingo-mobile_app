@@ -31,15 +31,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<UpdatePreferencesRequested>(_onUpdatePreferencesRequested);
     on<UserProfileUpdated>(_onUserProfileUpdated);
     on<EnterGuestMode>(_onEnterGuestMode);
+    on<TriggerSyncAttempts>(_onTriggerSyncAttempts);
   }
 
   void _onLoginRequested(LoginRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     final result = await loginUser(event.email, event.password);
-    await result.fold(
-      (failure) async => emit(AuthError(failure.message)),
-      (user) async {
-        await _syncAllOfflineAttempts(emit, user);
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (user) {
+        emit(AuthAuthenticated(user, isSyncing: true));
+        add(TriggerSyncAttempts());
       },
     );
   }
@@ -47,10 +49,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   void _onRegisterRequested(RegisterRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     final result = await registerUser(event.email, event.password, event.displayName);
-    await result.fold(
-      (failure) async => emit(AuthError(failure.message)),
-      (user) async {
-        await _syncAllOfflineAttempts(emit, user);
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (user) {
+        emit(AuthAuthenticated(user, isSyncing: true));
+        add(TriggerSyncAttempts());
       },
     );
   }
@@ -85,7 +88,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         // Successful auto-login, sync if anything pending
         final prefBox = Hive.box('auth_preferences_box');
         await prefBox.put('isGuest', false);
-        await _syncAllOfflineAttempts(emit, user);
+        emit(AuthAuthenticated(user, isSyncing: true));
+        add(TriggerSyncAttempts());
       },
     );
   }
@@ -173,50 +177,157 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthGuest());
   }
 
-  Future<void> _syncAllOfflineAttempts(Emitter<AuthState> emit, User user) async {
-    final guestBox = Hive.box('guest_attempts_box');
-    final authBox = Hive.box('auth_attempts_box');
-    final prefBox = Hive.box('auth_preferences_box');
-    
-    await prefBox.put('isGuest', false);
+  void _onTriggerSyncAttempts(TriggerSyncAttempts event, Emitter<AuthState> emit) async {
+    final currentState = state;
+    if (currentState is! AuthAuthenticated) return;
 
-    User currentUser = user;
+    emit(currentState.copyWith(isSyncing: true, syncFailed: false));
 
-    // 1. Sync guest attempts if any
-    if (guestBox.isNotEmpty) {
-      try {
+    try {
+      final guestBox = Hive.box('guest_attempts_box');
+      final authBox = Hive.box('auth_attempts_box');
+      final prefBox = Hive.box('auth_preferences_box');
+      final guestDashboardBox = Hive.box('guest_dashboard_box');
+
+      User currentUser = currentState.user;
+
+      // 1. Sync guest preferred language & daily goal first
+      final guestDashboard = guestDashboardBox.get('dashboard');
+      if (guestDashboard is Map) {
+        final prefLang = guestDashboard['preferredLanguage'];
+        String? guestPreferredLanguageId = prefLang is Map ? prefLang['id'] as String? : null;
+        final guestGoal = guestDashboard['dailyLearningGoalMinutes'] as int?;
+
+        // Map static/local language IDs to backend database ObjectIds
+        if (guestPreferredLanguageId != null) {
+          if (guestPreferredLanguageId == 'amharic' || guestPreferredLanguageId == '1') {
+            guestPreferredLanguageId = '6a12c216c24497386f0a9bc0';
+          } else if (guestPreferredLanguageId == 'oromo' || guestPreferredLanguageId == '2') {
+            guestPreferredLanguageId = '6a12cc0ea612e8468f3a13f0';
+          } else if (guestPreferredLanguageId == 'tigrinya' || guestPreferredLanguageId == '3') {
+            guestPreferredLanguageId = '6a12cc0fa612e8468f3a1529';
+          }
+        }
+
+        if ((guestPreferredLanguageId != null && guestPreferredLanguageId.isNotEmpty) || guestGoal != null) {
+          final updateResult = await authRepository.updateUserProfile(
+            preferredLanguageId: guestPreferredLanguageId,
+            dailyLearningGoalMinutes: guestGoal,
+          );
+          
+          bool updateFailed = false;
+          await updateResult.fold(
+            (failure) async {
+              updateFailed = true;
+            },
+            (updatedUser) async {
+              currentUser = updatedUser;
+            },
+          );
+
+          if (updateFailed) {
+            emit(AuthAuthenticated(
+              currentUser,
+              isSyncing: false,
+              syncFailed: true,
+            ));
+            return;
+          }
+        }
+      }
+
+      // 2. Sync guest attempts if any
+      if (guestBox.isNotEmpty) {
         final attempts = guestBox.values
             .map((val) => Map<String, dynamic>.from(val as Map))
             .toList();
         final result = await authRepository.syncOfflineAttempts(attempts);
+        
+        bool syncFailedFlag = false;
         await result.fold(
-          (failure) async {},
-          (syncedUser) async {
+          (failure) async {
+            syncFailedFlag = true;
+          },
+          (syncResult) async {
             await guestBox.clear();
-            currentUser = syncedUser;
+            currentUser = syncResult.user;
+
+            // Cache the returned XP and streak in the authenticated dashboard box
+            final authDbBox = Hive.box('auth_dashboard_box');
+            final currentDashboard = Map<String, dynamic>.from(authDbBox.get('dashboard', defaultValue: <String, dynamic>{}) as Map);
+            currentDashboard['xp'] = syncResult.xp;
+            currentDashboard['streak'] = syncResult.streak;
+            currentDashboard['preferredLanguage'] = syncResult.user.preferredLanguageId != null ? {
+              'id': syncResult.user.preferredLanguageId,
+            } : null;
+            await authDbBox.put('dashboard', currentDashboard);
           },
         );
-      } catch (_) {}
-    }
 
-    // 2. Sync authenticated attempts if any
-    if (authBox.isNotEmpty) {
-      try {
+        if (syncFailedFlag) {
+          emit(AuthAuthenticated(
+            currentUser,
+            isSyncing: false,
+            syncFailed: true,
+          ));
+          return;
+        }
+      }
+
+      // 3. Sync authenticated attempts if any
+      if (authBox.isNotEmpty) {
         final attempts = authBox.values
             .map((val) => Map<String, dynamic>.from(val as Map))
             .toList();
         final result = await authRepository.syncOfflineAttempts(attempts);
+        
+        bool syncFailedFlag = false;
         await result.fold(
-          (failure) async {},
-          (syncedUser) async {
+          (failure) async {
+            syncFailedFlag = true;
+          },
+          (syncResult) async {
             await authBox.clear();
-            currentUser = syncedUser;
+            currentUser = syncResult.user;
+
+            // Cache the returned XP and streak in the authenticated dashboard box
+            final authDbBox = Hive.box('auth_dashboard_box');
+            final currentDashboard = Map<String, dynamic>.from(authDbBox.get('dashboard', defaultValue: <String, dynamic>{}) as Map);
+            currentDashboard['xp'] = syncResult.xp;
+            currentDashboard['streak'] = syncResult.streak;
+            currentDashboard['preferredLanguage'] = syncResult.user.preferredLanguageId != null ? {
+              'id': syncResult.user.preferredLanguageId,
+            } : null;
+            await authDbBox.put('dashboard', currentDashboard);
           },
         );
-      } catch (_) {}
-    }
 
-    emit(AuthAuthenticated(currentUser));
+        if (syncFailedFlag) {
+          emit(AuthAuthenticated(
+            currentUser,
+            isSyncing: false,
+            syncFailed: true,
+          ));
+          return;
+        }
+      }
+
+      // All sync operations succeeded: set isGuest=false and clear guest cache
+      await prefBox.put('isGuest', false);
+      await guestDashboardBox.clear();
+
+      emit(AuthAuthenticated(
+        currentUser,
+        isSyncing: false,
+        syncFailed: false,
+      ));
+    } catch (e) {
+      emit(AuthAuthenticated(
+        currentState.user,
+        isSyncing: false,
+        syncFailed: true,
+      ));
+    }
   }
 }
 

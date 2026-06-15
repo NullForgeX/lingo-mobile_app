@@ -77,3 +77,6 @@ class UserProfileUpdated extends AuthEvent {
 
 class EnterGuestMode extends AuthEvent {}
 
+class TriggerSyncAttempts extends AuthEvent {}
+
+

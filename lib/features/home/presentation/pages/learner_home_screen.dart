@@ -90,6 +90,7 @@ class LearnerHomeScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _buildHeader(context),
+                        _buildSyncBanner(context),
                         _buildLoginRecommendation(context),
                         const SizedBox(height: 32),
                         _buildStreakCard(context, dashboard),
@@ -111,6 +112,123 @@ class LearnerHomeScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSyncBanner(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        if (state is! AuthAuthenticated) {
+          return const SizedBox.shrink();
+        }
+        if (!state.isSyncing && !state.syncFailed) {
+          return const SizedBox.shrink();
+        }
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        if (state.isSyncing) {
+          return Container(
+            margin: const EdgeInsets.only(top: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.primaryLight.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryLight),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Syncing offline progress...',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Updating your profile and achievements',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isDark ? Colors.white70 : Colors.black54,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        if (state.syncFailed) {
+          return Container(
+            margin: const EdgeInsets.only(top: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.errorLight.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.errorLight.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.sync_problem_rounded,
+                  color: AppColors.errorLight,
+                  size: 24,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sync failed',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black87,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tap retry to sync your offline accomplishments.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isDark ? Colors.white70 : Colors.black54,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.refresh_rounded,
+                    color: AppColors.errorLight,
+                  ),
+                  onPressed: () {
+                    context.read<AuthBloc>().add(TriggerSyncAttempts());
+                  },
+                ),
+              ],
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 

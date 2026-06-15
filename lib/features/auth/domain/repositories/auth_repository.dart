@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../entities/user.dart';
+import '../entities/sync_result.dart';
 
 abstract class AuthRepository {
   Future<Either<Failure, User>> login(String email, String password);
@@ -17,7 +18,7 @@ abstract class AuthRepository {
     int? dailyLearningGoalMinutes,
     String? timezone,
   });
-  Future<Either<Failure, User>> syncOfflineAttempts(List<Map<String, dynamic>> attempts);
+  Future<Either<Failure, SyncResult>> syncOfflineAttempts(List<Map<String, dynamic>> attempts);
 }
 
 

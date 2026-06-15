@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 
 import '../../../../core/error/failures.dart';
 import '../../domain/entities/user.dart';
+import '../../domain/entities/sync_result.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_data_source.dart';
 
@@ -120,10 +121,10 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, User>> syncOfflineAttempts(List<Map<String, dynamic>> attempts) async {
+  Future<Either<Failure, SyncResult>> syncOfflineAttempts(List<Map<String, dynamic>> attempts) async {
     try {
-      final userModel = await remoteDataSource.syncOfflineAttempts(attempts);
-      return Right(userModel);
+      final syncResultModel = await remoteDataSource.syncOfflineAttempts(attempts);
+      return Right(syncResultModel);
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Failed to sync offline attempts.'));
     } catch (e) {
